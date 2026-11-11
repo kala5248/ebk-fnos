@@ -42,6 +42,8 @@ import StatisticsSettingPage from '@/views/desktop/settings/StatisticsSettingPag
 import ApplicationCloudSyncSettingsPage from '@/views/desktop/settings/ApplicationCloudSyncSettingsPage.vue';
 import BrowserCacheSettingPage from '@/views/desktop/settings/BrowserCacheSettingPage.vue';
 import DeveloperToolsPage from '@/views/desktop/settings/DeveloperToolsPage.vue';
+import AiModelSettingsPage from '@/views/desktop/settings/AiModelSettingsPage.vue';
+import SharedLedgerPage from '@/views/desktop/settings/SharedLedgerPage.vue';
 
 import ExchangeRatesListPage from '@/views/desktop/exchangerates/ListPage.vue';
 
@@ -247,6 +249,16 @@ const router = createRouter({
                 {
                     path: '/settings/developer_tools',
                     component: DeveloperToolsPage,
+                    beforeEnter: checkLogin
+                },
+                {
+                    path: '/settings/ai_model',
+                    component: AiModelSettingsPage,
+                    beforeEnter: checkLogin
+                },
+                {
+                    path: '/settings/shared_ledger',
+                    component: SharedLedgerPage,
                     beforeEnter: checkLogin
                 },
                 {

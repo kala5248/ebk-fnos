@@ -439,6 +439,15 @@ type Config struct {
 	OAuth2UserIdentifier              string
 	OAuth2AutoRegister                bool
 	OAuth2Provider                    string
+
+	EnableFnOSAuth      bool
+	FnOSBaseUrl         string
+	FnOSClientId        string
+	FnOSClientSecret    string
+	FnOSScope           string
+	FnOSAutoRegister    bool
+	FnOSRequestTimeout  uint32
+	FnOSSkipTLSVerify   bool
 	OAuth2StateExpiredTime            uint32
 	OAuth2StateExpiredTimeDuration    time.Duration
 	OAuth2RequestTimeout              uint32
@@ -1175,6 +1184,19 @@ func loadAuthConfiguration(config *Config, configFile *ini.File, sectionName str
 		config.OAuth2Provider = OAuth2ProviderGithub
 	} else {
 		return errs.ErrInvalidOAuth2Provider
+	}
+
+	config.EnableFnOSAuth = getConfigItemBoolValue(configFile, sectionName, "enable_fnos_auth", false)
+	config.FnOSBaseUrl = strings.TrimRight(getConfigItemStringValue(configFile, sectionName, "fnos_base_url"), "/")
+	config.FnOSClientId = getConfigItemStringValue(configFile, sectionName, "fnos_client_id")
+	config.FnOSClientSecret = getConfigItemStringValue(configFile, sectionName, "fnos_client_secret")
+	config.FnOSScope = getConfigItemStringValue(configFile, sectionName, "fnos_scope", "trim.user.all")
+	config.FnOSAutoRegister = getConfigItemBoolValue(configFile, sectionName, "fnos_auto_register", true)
+	config.FnOSRequestTimeout = getConfigItemUint32Value(configFile, sectionName, "fnos_request_timeout", 10000)
+	config.FnOSSkipTLSVerify = getConfigItemBoolValue(configFile, sectionName, "fnos_skip_tls_verify", false)
+
+	if config.EnableFnOSAuth && (config.FnOSBaseUrl == "" || config.FnOSClientId == "") {
+		return errs.ErrInvalidFnOSConfig
 	}
 
 	config.OAuth2StateExpiredTime = getConfigItemUint32Value(configFile, sectionName, "oauth2_state_expired_time", defaultOAuth2StateExpiredTime)

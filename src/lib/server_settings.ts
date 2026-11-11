@@ -1,3 +1,5 @@
+import { isUserLlmTextRecognitionEnabled, isUserLlmImageRecognitionEnabled } from '@/lib/user_llm.ts';
+
 function getServerSetting(key: string): string | number | boolean | Record<string, string> | undefined | null {
     const settings = window.EZBOOKKEEPING_SERVER_SETTINGS || {};
     return settings[key];
@@ -64,11 +66,15 @@ export function isMCPServerEnabled(): boolean {
 }
 
 export function isTransactionFromAITextRecognitionEnabled(): boolean {
-    return getServerSetting('llmtr') === 1;
+    return getServerSetting('llmtr') === 1 || isUserLlmTextRecognitionEnabled();
 }
 
 export function isTransactionFromAIImageRecognitionEnabled(): boolean {
-    return getServerSetting('llmir') === 1;
+    return getServerSetting('llmir') === 1 || isUserLlmImageRecognitionEnabled();
+}
+
+export function isFnOSAuthEnabled(): boolean {
+    return getServerSetting('n') === 1;
 }
 
 export function isInsightsExplorerCodingAssistantEnabled(): boolean {

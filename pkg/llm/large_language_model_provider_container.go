@@ -82,6 +82,34 @@ func initializeLargeLanguageModelProvider(llmConfig *settings.LLMConfig, enableR
 	return nil, errs.ErrInvalidLLMProvider
 }
 
+// GetJsonResponseByTextRecognitionModelWithConfig returns the json response from the given large language model configuration
+func (l *LargeLanguageModelProviderContainer) GetJsonResponseByTextRecognitionModelWithConfig(c core.Context, uid int64, llmConfig *settings.LLMConfig, request *data.LargeLanguageModelRequest) (*data.LargeLanguageModelTextualResponse, error) {
+	return l.getJsonResponseByConfig(c, uid, llmConfig, request)
+}
+
+// GetJsonResponseByReceiptImageRecognitionModelWithConfig returns the json response from the given large language model configuration
+func (l *LargeLanguageModelProviderContainer) GetJsonResponseByReceiptImageRecognitionModelWithConfig(c core.Context, uid int64, llmConfig *settings.LLMConfig, request *data.LargeLanguageModelRequest) (*data.LargeLanguageModelTextualResponse, error) {
+	return l.getJsonResponseByConfig(c, uid, llmConfig, request)
+}
+
+func (l *LargeLanguageModelProviderContainer) getJsonResponseByConfig(c core.Context, uid int64, llmConfig *settings.LLMConfig, request *data.LargeLanguageModelRequest) (*data.LargeLanguageModelTextualResponse, error) {
+	if llmConfig == nil || llmConfig.LLMProvider == "" {
+		return nil, errs.ErrInvalidLLMProvider
+	}
+
+	llmProvider, err := initializeLargeLanguageModelProvider(llmConfig, false)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if llmProvider == nil {
+		return nil, errs.ErrInvalidLLMProvider
+	}
+
+	return llmProvider.GetJsonResponse(c, uid, llmConfig, request)
+}
+
 // GetJsonResponseByTextRecognitionModel returns the json response from the current large language model provider by transaction text recognition model
 func (l *LargeLanguageModelProviderContainer) GetJsonResponseByTextRecognitionModel(c core.Context, uid int64, currentConfig *settings.Config, request *data.LargeLanguageModelRequest) (*data.LargeLanguageModelTextualResponse, error) {
 	if currentConfig.TextRecognitionLLMConfig == nil || Container.textRecognitionCurrentProvider == nil {

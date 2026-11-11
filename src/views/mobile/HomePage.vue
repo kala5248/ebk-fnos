@@ -2,6 +2,10 @@
     <f7-page ptr @ptr:refresh="reload" @page:afterin="onPageAfterIn">
         <f7-navbar>
             <f7-nav-title :title="tt('global.app.title')"></f7-nav-title>
+            <f7-nav-right>
+                <f7-link icon-f7="arrow_right_arrow_left" :aria-label="tt('Switch Ledger')"
+                         @click="showLedgerActionSheet = true" v-if="ledgers.length > 1"></f7-link>
+            </f7-nav-right>
         </f7-navbar>
 
         <overview-dashboard :layout="layout" :loading="loading" @navigate="onNavigate" />
@@ -31,6 +35,19 @@
                 <span class="tabbar-label">{{ tt('Settings') }}</span>
             </f7-link>
         </f7-toolbar>
+
+        <f7-actions close-by-outside-click close-on-escape :opened="showLedgerActionSheet" @actions:closed="showLedgerActionSheet = false">
+            <f7-actions-group>
+                <f7-actions-label>{{ tt('Current Ledger') }}</f7-actions-label>
+                <f7-actions-button v-for="ledger in ledgers" :key="ledger.id" @click="switchLedger(ledger)">
+                    {{ ledger.name }}{{ isCurrentLedger(ledger) ? ' ✓' : '' }}
+                </f7-actions-button>
+            </f7-actions-group>
+            <f7-actions-group>
+                <f7-actions-button close @click="navigateToSharedLedgerSettings">{{ tt('Manage Shared Ledgers') }}</f7-actions-button>
+                <f7-actions-button bold close>{{ tt('Cancel') }}</f7-actions-button>
+            </f7-actions-group>
+        </f7-actions>
 
         <f7-popover class="template-popover-menu" target-el="#homepage-add-button"
                     v-model:opened="showTransactionTemplatePopover">
@@ -105,6 +122,9 @@ import {
     getOverviewTransactionCategoryStatisticDateTypes,
     parseMobileOverviewLayout
 } from '@/lib/overview_layout.ts';
+import services from '@/lib/services.ts';
+import { getCurrentLedgerId, setCurrentLedgerId } from '@/lib/ledger.ts';
+import type { LedgerInfoResponse } from '@/models/ledger.ts';
 import { isUserLogined, isUserUnlocked } from '@/lib/userstate.ts';
 import { getShareCacheImageBlob } from '@/lib/cache.ts';
 import {
@@ -121,6 +141,9 @@ const props = defineProps<{
 
 const { tt } = useI18n();
 const { showToast } = useI18nUIComponents();
+
+const ledgers = ref<LedgerInfoResponse[]>([]);
+const showLedgerActionSheet = ref<boolean>(false);
 
 const settingsStore = useSettingsStore();
 const accountsStore = useAccountsStore();
@@ -154,6 +177,31 @@ function openTransactionTemplatePopover(): void {
     if (hasTransactionAddMenuItems.value) {
         showTransactionTemplatePopover.value = true;
     }
+}
+
+function loadLedgers(): void {
+    services.getLedgers().then(response => {
+        ledgers.value = (response.data && response.data.result) ? response.data.result : [];
+    }).catch(() => {
+        // ignore
+    });
+}
+
+function isCurrentLedger(ledger: LedgerInfoResponse): boolean {
+    return getCurrentLedgerId() === parseInt(ledger.id, 10);
+}
+
+function switchLedger(ledger: LedgerInfoResponse): void {
+    if (isCurrentLedger(ledger)) {
+        return;
+    }
+
+    setCurrentLedgerId(parseInt(ledger.id, 10));
+    window.location.reload();
+}
+
+function navigateToSharedLedgerSettings(): void {
+    props.f7router.navigate('/settings/shared_ledger');
 }
 
 function init(): void {
@@ -353,6 +401,8 @@ function onNavigate(type: MobileOverviewWidgetNavigationType, path?: string): vo
 }
 
 function onPageAfterIn(): void {
+    loadLedgers();
+
     if (!loading.value) {
         reload();
     }

@@ -45,6 +45,30 @@ func updateDatabaseStructure(c *core.CliContext) error {
 func updateAllDatabaseTablesStructure(c *core.CliContext) error {
 	var err error
 
+	err = datastore.Container.UserStore.SyncStructs(new(models.Ledger))
+
+	if err != nil {
+		return err
+	}
+
+	log.BootInfof(c, "[database.updateAllDatabaseTablesStructure] ledger table maintained successfully")
+
+	err = datastore.Container.UserStore.SyncStructs(new(models.LedgerMember))
+
+	if err != nil {
+		return err
+	}
+
+	log.BootInfof(c, "[database.updateAllDatabaseTablesStructure] ledger member table maintained successfully")
+
+	err = datastore.Container.UserStore.SyncStructs(new(models.UserLlmConfig))
+
+	if err != nil {
+		return err
+	}
+
+	log.BootInfof(c, "[database.updateAllDatabaseTablesStructure] user llm config table maintained successfully")
+
 	err = datastore.Container.UserStore.SyncStructs(new(models.User))
 
 	if err != nil {

@@ -120,6 +120,15 @@
                                             {{ oauth2LoginDisplayName }}
                                             <v-progress-circular indeterminate size="22" class="ms-2" v-if="loggingInByOAuth2"></v-progress-circular>
                                         </v-btn>
+
+                                        <v-btn block class="mt-3" :disabled="show2faInput || loggingInByPassword || loggingInByOAuth2 || loggingInByFnOS || verifying"
+                                               :loading="loggingInByFnOS"
+                                               @click="startFnOSLogin" v-if="isFnOSAuthEnabled()">
+                                            {{ tt('Log in with fnOS') }}
+                                            <template #loader>
+                                                <v-progress-circular indeterminate size="22"/>
+                                            </template>
+                                        </v-btn>
                                     </v-col>
 
                                     <v-col cols="12" class="auth-links text-body-large" v-if="!isInternalAuthEnabled()">
@@ -164,6 +173,33 @@
             </v-col>
         </v-row>
 
+        <v-dialog width="520" v-model="showFnOSDialog" persistent>
+            <v-card :title="tt('Log in with fnOS')">
+                <v-card-text class="text-body-medium">
+                    <div class="mb-3">{{ tt('Open the fnOS authorization page and sign in (step 1)') }}</div>
+                    <div class="mb-3">{{ tt('Copy the one-time authorization code shown on that page and paste it below (step 2)') }}</div>
+                    <v-btn class="mb-4" variant="outlined" color="default" :href="fnosAuthorizeUrl" target="_blank"
+                           :disabled="!fnosAuthorizeUrl">{{ tt('Open the Authorization Page') }}</v-btn>
+                    <v-text-field density="compact" persistent-placeholder autocomplete="off"
+                                  :label="tt('Authorization Code')"
+                                  :placeholder="tt('Paste the one-time authorization code')"
+                                  v-model.trim="fnosCode"
+                                  :disabled="loggingInByFnOS"
+                                  @keyup.enter="confirmFnOSLogin"/>
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer/>
+                    <v-btn variant="text" color="default" :disabled="loggingInByFnOS" @click="cancelFnOSLogin">{{ tt('Cancel') }}</v-btn>
+                    <v-btn color="primary" :loading="loggingInByFnOS" :disabled="!fnosCode" @click="confirmFnOSLogin">
+                        {{ tt('Log In') }}
+                        <template #loader>
+                            <v-progress-circular indeterminate size="20"/>
+                        </template>
+                    </v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
         <switch-to-mobile-dialog v-model:show="showMobileQrCode" />
         <snack-bar ref="snackbar" />
     </div>
@@ -190,8 +226,11 @@ import {
     isUserForgetPasswordEnabled,
     isUserVerifyEmailEnabled,
     isInternalAuthEnabled,
-    isOAuth2Enabled
+    isOAuth2Enabled,
+    isFnOSAuthEnabled
 } from '@/lib/server_settings.ts';
+
+import services from '@/lib/services.ts';
 
 import {
     mdiOnepassword,
@@ -232,6 +271,70 @@ const snackbar = useTemplateRef<SnackBarType>('snackbar');
 
 const show2faInput = ref<boolean>(false);
 const showMobileQrCode = ref<boolean>(false);
+const showFnOSDialog = ref<boolean>(false);
+const loggingInByFnOS = ref<boolean>(false);
+const fnosAuthorizeUrl = ref<string>('');
+const fnosState = ref<string>('');
+const fnosCode = ref<string>('');
+
+function startFnOSLogin(): void {
+    if (loggingInByFnOS.value) {
+        return;
+    }
+
+    fnosCode.value = '';
+    fnosAuthorizeUrl.value = '';
+    fnosState.value = '';
+    showFnOSDialog.value = true;
+
+    services.getFnOSAuthUrl().then(response => {
+        const result = response.data ? response.data.result : null;
+
+        if (!result) {
+            snackbar.value?.showMessage(tt('Unable to start fnOS authorization'));
+            showFnOSDialog.value = false;
+            return;
+        }
+
+        fnosAuthorizeUrl.value = result.url;
+        fnosState.value = result.state;
+    }).catch(error => {
+        showFnOSDialog.value = false;
+        snackbar.value?.showError(error);
+    });
+}
+
+function cancelFnOSLogin(): void {
+    showFnOSDialog.value = false;
+    fnosCode.value = '';
+    fnosState.value = '';
+}
+
+function confirmFnOSLogin(): void {
+    if (!fnosCode.value || !fnosState.value || loggingInByFnOS.value) {
+        return;
+    }
+
+    loggingInByFnOS.value = true;
+
+    rootStore.authorizeByFnOS({ state: fnosState.value, code: fnosCode.value }).then(authResponse => {
+        loggingInByFnOS.value = false;
+        showFnOSDialog.value = false;
+        doAfterLogin(authResponse);
+        router.replace('/');
+    }).catch(error => {
+        loggingInByFnOS.value = false;
+
+        if (error && error.message === 'Unable to log in') {
+            snackbar.value?.showMessage(tt('The authorization code is invalid or has expired'));
+            return;
+        }
+
+        if (!error.processed) {
+            snackbar.value?.showError(error);
+        }
+    });
+}
 
 function login(): void {
     if (!username.value) {

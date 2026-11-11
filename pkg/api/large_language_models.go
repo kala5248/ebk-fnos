@@ -27,6 +27,7 @@ type LargeLanguageModelsApi struct {
 	transactionTags       *services.TransactionTagService
 	accounts              *services.AccountService
 	users                 *services.UserService
+	userLlmConfigs        *services.UserLlmConfigService
 }
 
 // Initialize a large language models api singleton instance
@@ -39,15 +40,12 @@ var (
 		transactionTags:       services.TransactionTags,
 		accounts:              services.Accounts,
 		users:                 services.Users,
+		userLlmConfigs:        services.UserLlmConfigs,
 	}
 )
 
 // RecognizeTransactionTextHandler returns the recognized transaction text result
 func (a *LargeLanguageModelsApi) RecognizeTransactionTextHandler(c *core.WebContext) (any, *errs.Error) {
-	if a.CurrentConfig().TextRecognitionLLMConfig == nil || a.CurrentConfig().TextRecognitionLLMConfig.LLMProvider == "" || !a.CurrentConfig().TransactionFromAITextRecognition {
-		return nil, errs.ErrLargeLanguageModelProviderNotEnabled
-	}
-
 	clientTimezone, err := c.GetClientTimezone()
 
 	if err != nil {
@@ -56,11 +54,26 @@ func (a *LargeLanguageModelsApi) RecognizeTransactionTextHandler(c *core.WebCont
 	}
 
 	uid := c.GetCurrentUid()
-	user, err := a.users.GetUserById(c, uid)
+	loginUid := c.GetCurrentLoginUid()
+
+	userLlmConfig, _, err := a.userLlmConfigs.ResolveLLMConfig(c, loginUid, false)
+
+	if err != nil {
+		log.Warnf(c, "[large_language_models.RecognizeTransactionTextHandler] cannot resolve user llm config for user \"uid:%d\", because %s", loginUid, err.Error())
+		return nil, errs.Or(err, errs.ErrLargeLanguageModelProviderNotEnabled)
+	}
+
+	globalLlmEnabled := a.CurrentConfig().TextRecognitionLLMConfig != nil && a.CurrentConfig().TextRecognitionLLMConfig.LLMProvider != "" && a.CurrentConfig().TransactionFromAITextRecognition
+
+	if userLlmConfig == nil && !globalLlmEnabled {
+		return nil, errs.ErrLargeLanguageModelProviderNotEnabled
+	}
+
+	user, err := a.users.GetUserById(c, loginUid)
 
 	if err != nil {
 		if !errs.IsCustomError(err) {
-			log.Warnf(c, "[large_language_models.RecognizeTransactionTextHandler] failed to get user for user \"uid:%d\", because %s", uid, err.Error())
+			log.Warnf(c, "[large_language_models.RecognizeTransactionTextHandler] failed to get user for user \"uid:%d\", because %s", loginUid, err.Error())
 		}
 
 		return false, errs.ErrUserNotFound
@@ -127,7 +140,13 @@ func (a *LargeLanguageModelsApi) RecognizeTransactionTextHandler(c *core.WebCont
 		UserPromptType: data.LARGE_LANGUAGE_MODEL_REQUEST_PROMPT_TYPE_TEXT,
 	}
 
-	llmResponse, err := llm.Container.GetJsonResponseByTextRecognitionModel(c, c.GetCurrentUid(), a.CurrentConfig(), llmRequest)
+	var llmResponse *data.LargeLanguageModelTextualResponse
+
+	if userLlmConfig != nil {
+		llmResponse, err = llm.Container.GetJsonResponseByTextRecognitionModelWithConfig(c, loginUid, userLlmConfig, llmRequest)
+	} else {
+		llmResponse, err = llm.Container.GetJsonResponseByTextRecognitionModel(c, uid, a.CurrentConfig(), llmRequest)
+	}
 
 	if err != nil {
 		log.Errorf(c, "[large_language_models.RecognizeTransactionTextHandler] failed to get llm response user \"uid:%d\", because %s", uid, err.Error())
@@ -150,10 +169,6 @@ func (a *LargeLanguageModelsApi) RecognizeTransactionTextHandler(c *core.WebCont
 
 // RecognizeReceiptImageHandler returns the recognized receipt image result
 func (a *LargeLanguageModelsApi) RecognizeReceiptImageHandler(c *core.WebContext) (any, *errs.Error) {
-	if a.CurrentConfig().ReceiptImageRecognitionLLMConfig == nil || a.CurrentConfig().ReceiptImageRecognitionLLMConfig.LLMProvider == "" || !a.CurrentConfig().TransactionFromAIImageRecognition {
-		return nil, errs.ErrLargeLanguageModelProviderNotEnabled
-	}
-
 	clientTimezone, err := c.GetClientTimezone()
 
 	if err != nil {
@@ -162,11 +177,26 @@ func (a *LargeLanguageModelsApi) RecognizeReceiptImageHandler(c *core.WebContext
 	}
 
 	uid := c.GetCurrentUid()
-	user, err := a.users.GetUserById(c, uid)
+	loginUid := c.GetCurrentLoginUid()
+
+	userLlmConfig, _, err := a.userLlmConfigs.ResolveLLMConfig(c, loginUid, true)
+
+	if err != nil {
+		log.Warnf(c, "[large_language_models.RecognizeReceiptImageHandler] cannot resolve user llm config for user \"uid:%d\", because %s", loginUid, err.Error())
+		return nil, errs.Or(err, errs.ErrLargeLanguageModelProviderNotEnabled)
+	}
+
+	globalLlmEnabled := a.CurrentConfig().ReceiptImageRecognitionLLMConfig != nil && a.CurrentConfig().ReceiptImageRecognitionLLMConfig.LLMProvider != "" && a.CurrentConfig().TransactionFromAIImageRecognition
+
+	if userLlmConfig == nil && !globalLlmEnabled {
+		return nil, errs.ErrLargeLanguageModelProviderNotEnabled
+	}
+
+	user, err := a.users.GetUserById(c, loginUid)
 
 	if err != nil {
 		if !errs.IsCustomError(err) {
-			log.Warnf(c, "[large_language_models.RecognizeReceiptImageHandler] failed to get user for user \"uid:%d\", because %s", uid, err.Error())
+			log.Warnf(c, "[large_language_models.RecognizeReceiptImageHandler] failed to get user for user \"uid:%d\", because %s", loginUid, err.Error())
 		}
 
 		return false, errs.ErrUserNotFound
@@ -263,7 +293,13 @@ func (a *LargeLanguageModelsApi) RecognizeReceiptImageHandler(c *core.WebContext
 		UserPromptContentType: contentType,
 	}
 
-	llmResponse, err := llm.Container.GetJsonResponseByReceiptImageRecognitionModel(c, c.GetCurrentUid(), a.CurrentConfig(), llmRequest)
+	var llmResponse *data.LargeLanguageModelTextualResponse
+
+	if userLlmConfig != nil {
+		llmResponse, err = llm.Container.GetJsonResponseByReceiptImageRecognitionModelWithConfig(c, loginUid, userLlmConfig, llmRequest)
+	} else {
+		llmResponse, err = llm.Container.GetJsonResponseByReceiptImageRecognitionModel(c, uid, a.CurrentConfig(), llmRequest)
+	}
 
 	if err != nil {
 		log.Errorf(c, "[large_language_models.RecognizeReceiptImageHandler] failed to get llm response user \"uid:%d\", because %s", uid, err.Error())

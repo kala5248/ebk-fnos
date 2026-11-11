@@ -27,6 +27,24 @@
 
             <li class="nav-section-title">
                 <div class="title-wrapper">
+                    <span class="title-text">{{ tt('AI & Sharing') }}</span>
+                </div>
+            </li>
+            <li class="nav-link">
+                <router-link to="/settings/ai_model">
+                    <v-icon class="nav-item-icon" :icon="mdiRobotOutline"/>
+                    <span class="nav-item-title">{{ tt('AI Accounting Model') }}</span>
+                </router-link>
+            </li>
+            <li class="nav-link">
+                <router-link to="/settings/shared_ledger">
+                    <v-icon class="nav-item-icon" :icon="mdiAccountMultipleOutline"/>
+                    <span class="nav-item-title">{{ tt('Shared Ledgers') }}</span>
+                </router-link>
+            </li>
+
+            <li class="nav-section-title">
+                <div class="title-wrapper">
                     <span class="title-text">{{ tt('Basis Data') }}</span>
                 </div>
             </li>
@@ -150,7 +168,9 @@ import {
     mdiCloudOutline,
     mdiSwapHorizontal,
     mdiDatabaseClockOutline,
-    mdiCodeBraces
+    mdiCodeBraces,
+    mdiRobotOutline,
+    mdiAccountMultipleOutline
 } from '@mdi/js';
 
 const route = useRoute();

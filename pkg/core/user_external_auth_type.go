@@ -11,6 +11,7 @@ const (
 	USER_EXTERNAL_AUTH_TYPE_OAUTH2_NEXTCLOUD UserExternalAuthType = "nextcloud"
 	USER_EXTERNAL_AUTH_TYPE_OAUTH2_GITEA     UserExternalAuthType = "gitea"
 	USER_EXTERNAL_AUTH_TYPE_OAUTH2_GITHUB    UserExternalAuthType = "github"
+	USER_EXTERNAL_AUTH_TYPE_FNOS             UserExternalAuthType = "fnos"
 )
 
 // GetCategory returns the category of the UserExternalAuthType
@@ -19,7 +20,8 @@ func (t UserExternalAuthType) GetCategory() string {
 	case USER_EXTERNAL_AUTH_TYPE_OAUTH2_OIDC,
 		USER_EXTERNAL_AUTH_TYPE_OAUTH2_NEXTCLOUD,
 		USER_EXTERNAL_AUTH_TYPE_OAUTH2_GITEA,
-		USER_EXTERNAL_AUTH_TYPE_OAUTH2_GITHUB:
+		USER_EXTERNAL_AUTH_TYPE_OAUTH2_GITHUB,
+		USER_EXTERNAL_AUTH_TYPE_FNOS:
 		return USER_EXTERNAL_AUTH_TYPE_CATEOGRY_OAUTH2
 	}
 	return ""

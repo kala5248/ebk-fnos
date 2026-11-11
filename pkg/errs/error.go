@@ -46,6 +46,9 @@ const (
 	NormalSubcategoryInsightsExplorer       = 18
 	NormalSubcategoryTagGroup               = 19
 	NormalSubcategoryUserCustomIcon         = 20
+	NormalSubcategoryLedger                 = 21
+	NormalSubcategoryUserLlmConfig          = 22
+	NormalSubcategoryFnOSAuth               = 23
 )
 
 // Error represents the specific error returned to user

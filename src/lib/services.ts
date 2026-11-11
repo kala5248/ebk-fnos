@@ -46,6 +46,27 @@ import type {
     RegisterResponse
 } from '@/models/auth_response.ts';
 import type {
+    LedgerInfoResponse,
+    LedgerMemberInfoResponse,
+    LedgerCreateRequest,
+    LedgerJoinRequest,
+    LedgerRenameRequest,
+    LedgerInviteCodeRegenerateRequest,
+    LedgerMemberRoleUpdateRequest,
+    LedgerMemberRemoveRequest,
+    LedgerDeleteRequest,
+    LedgerLeaveRequest
+} from '@/models/ledger.ts';
+import type {
+    UserLlmConfigResponse,
+    UserLlmConfigUpdateRequest,
+    UserLlmConfigTestResponse
+} from '@/models/user_llm_config.ts';
+import type {
+    FnOSAuthUrlResponse,
+    FnOSLoginRequest
+} from '@/models/fnos_auth.ts';
+import type {
     ExportTransactionDataRequest,
     ClearDataRequest,
     ClearAccountTransactionsRequest,
@@ -218,6 +239,7 @@ import {
 } from './datetime.ts';
 import { generateRandomUUID } from './misc.ts';
 import { getBasePath } from './web.ts';
+import { getCurrentLedgerId } from './ledger.ts';
 import logger from './logger.ts';
 
 interface ApiRequestConfig extends AxiosRequestConfig {
@@ -253,6 +275,12 @@ axios.interceptors.request.use((config: ApiRequestConfig) => {
     }
 
     config.headers['X-Timezone-Name'] = timezoneName;
+
+    const currentLedgerId = getCurrentLedgerId();
+
+    if (currentLedgerId > 0 && !config.noAuth) {
+        config.headers['X-Ledger-Id'] = currentLedgerId.toString();
+    }
 
     if (needBlockRequest && !config.ignoreBlocked) {
         return new Promise(resolve => {
@@ -983,6 +1011,72 @@ export default {
         }
 
         return url;
+    },
+    getLedgers: (): ApiResponsePromise<LedgerInfoResponse[]> => {
+        return axios.get<ApiResponse<LedgerInfoResponse[]>>('v1/ledgers/list.json');
+    },
+    createLedger: (req: LedgerCreateRequest): ApiResponsePromise<LedgerInfoResponse> => {
+        return axios.post<ApiResponse<LedgerInfoResponse>>('v1/ledgers/create.json', req);
+    },
+    joinLedger: (req: LedgerJoinRequest): ApiResponsePromise<LedgerInfoResponse> => {
+        return axios.post<ApiResponse<LedgerInfoResponse>>('v1/ledgers/join.json', req);
+    },
+    renameLedger: (req: LedgerRenameRequest): ApiResponsePromise<boolean> => {
+        return axios.post<ApiResponse<boolean>>('v1/ledgers/rename.json', req);
+    },
+    regenerateLedgerInviteCode: (req: LedgerInviteCodeRegenerateRequest): ApiResponsePromise<string> => {
+        return axios.post<ApiResponse<string>>('v1/ledgers/invite/regenerate.json', req);
+    },
+    getLedgerMembers: ({ ledgerId }: { ledgerId: string }): ApiResponsePromise<LedgerMemberInfoResponse[]> => {
+        return axios.get<ApiResponse<LedgerMemberInfoResponse[]>>('v1/ledgers/members.json', {
+            params: {
+                ledgerId: ledgerId
+            }
+        } as ApiRequestConfig);
+    },
+    updateLedgerMemberRole: (req: LedgerMemberRoleUpdateRequest): ApiResponsePromise<boolean> => {
+        return axios.post<ApiResponse<boolean>>('v1/ledgers/members/role.json', req);
+    },
+    removeLedgerMember: (req: LedgerMemberRemoveRequest): ApiResponsePromise<boolean> => {
+        return axios.post<ApiResponse<boolean>>('v1/ledgers/members/remove.json', req);
+    },
+    leaveLedger: (req: LedgerLeaveRequest): ApiResponsePromise<boolean> => {
+        return axios.post<ApiResponse<boolean>>('v1/ledgers/leave.json', req);
+    },
+    deleteLedger: (req: LedgerDeleteRequest): ApiResponsePromise<boolean> => {
+        return axios.post<ApiResponse<boolean>>('v1/ledgers/delete.json', req);
+    },
+    getUserLlmConfig: (): ApiResponsePromise<UserLlmConfigResponse | false> => {
+        return axios.get<ApiResponse<UserLlmConfigResponse | false>>('v1/llm/user_config/get.json');
+    },
+    saveUserLlmConfig: (req: UserLlmConfigUpdateRequest): ApiResponsePromise<UserLlmConfigResponse> => {
+        return axios.post<ApiResponse<UserLlmConfigResponse>>('v1/llm/user_config/save.json', req, {
+            timeout: DEFAULT_LLM_API_TIMEOUT
+        } as ApiRequestConfig);
+    },
+    deleteUserLlmConfig: (): ApiResponsePromise<boolean> => {
+        return axios.post<ApiResponse<boolean>>('v1/llm/user_config/delete.json', {});
+    },
+    testUserLlmConfig: (): ApiResponsePromise<UserLlmConfigTestResponse> => {
+        return axios.post<ApiResponse<UserLlmConfigTestResponse>>('v1/llm/user_config/test.json', {}, {
+            timeout: DEFAULT_LLM_API_TIMEOUT
+        } as ApiRequestConfig);
+    },
+    getFnOSAuthUrl: (): ApiResponsePromise<FnOSAuthUrlResponse> => {
+        return axios.get<ApiResponse<FnOSAuthUrlResponse>>('fnos/auth_url.json', {
+            noAuth: true
+        } as ApiRequestConfig);
+    },
+    loginByFnOS: (req: FnOSLoginRequest): ApiResponsePromise<AuthResponse> => {
+        return axios.post<ApiResponse<AuthResponse>>('fnos/login.json', req, {
+            noAuth: true
+        } as ApiRequestConfig);
+    },
+    getFnOSLinkUrl: (): ApiResponsePromise<FnOSAuthUrlResponse> => {
+        return axios.get<ApiResponse<FnOSAuthUrlResponse>>('v1/fnos/link_url.json');
+    },
+    linkFnOS: (req: FnOSLoginRequest): ApiResponsePromise<boolean> => {
+        return axios.post<ApiResponse<boolean>>('v1/fnos/link.json', req);
     },
     generateGoogleMapJavascriptUrl: (language: string | undefined, callbackFnName: string): string => {
         let url = `${GOOGLE_MAP_JAVASCRIPT_URL}?key=${getGoogleMapAPIKey()}&libraries=core,marker&callback=${callbackFnName}`;

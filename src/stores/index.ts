@@ -40,6 +40,7 @@ import {
     clearCurrentTokenAndUserInfo
 } from '@/lib/userstate.ts';
 import services, { type ApiResponsePromise } from '@/lib/services.ts';
+import { setCachedUserLlmConfig } from '@/lib/user_llm.ts';
 import logger from '@/lib/logger.ts';
 
 export const useRootStore = defineStore('root', () => {
@@ -121,6 +122,7 @@ export const useRootStore = defineStore('root', () => {
                 settingsStore.setApplicationSettingsFromCloudSettings(data.result.applicationCloudSettings);
 
                 updateCurrentToken(data.result.token);
+                refreshUserLlmConfig();
 
                 if (data.result.user && isObject(data.result.user)) {
                     userStore.storeUserBasicInfo(data.result.user);
@@ -182,6 +184,7 @@ export const useRootStore = defineStore('root', () => {
                 settingsStore.setApplicationSettingsFromCloudSettings(data.result.applicationCloudSettings);
 
                 updateCurrentToken(data.result.token);
+                refreshUserLlmConfig();
 
                 if (data.result.user && isObject(data.result.user)) {
                     userStore.storeUserBasicInfo(data.result.user);
@@ -230,6 +233,7 @@ export const useRootStore = defineStore('root', () => {
                 settingsStore.setApplicationSettingsFromCloudSettings(data.result.applicationCloudSettings);
 
                 updateCurrentToken(data.result.token);
+                refreshUserLlmConfig();
 
                 if (data.result.user && isObject(data.result.user)) {
                     userStore.storeUserBasicInfo(data.result.user);
@@ -268,6 +272,7 @@ export const useRootStore = defineStore('root', () => {
 
                 if (data.result.token && isString(data.result.token)) {
                     updateCurrentToken(data.result.token);
+                    refreshUserLlmConfig();
                 }
 
                 if (data.result.user && isObject(data.result.user)) {
@@ -649,6 +654,66 @@ export const useRootStore = defineStore('root', () => {
         });
     }
 
+    function refreshUserLlmConfig(): Promise<void> {
+        return services.getUserLlmConfig().then(response => {
+            const result = response.data ? response.data.result : null;
+
+            if (result && typeof result === 'object') {
+                setCachedUserLlmConfig(result);
+            } else {
+                setCachedUserLlmConfig(null);
+            }
+        }).catch(() => {
+            setCachedUserLlmConfig(null);
+        });
+    }
+
+    function authorizeByFnOS({ state, code }: { state: string, code: string }): Promise<AuthResponse> {
+        return new Promise((resolve, reject) => {
+            services.loginByFnOS({ state: state, code: code }).then(response => {
+                const data = response.data;
+
+                if (!data || !data.success || !data.result || !data.result.token) {
+                    reject({ message: 'Unable to log in' });
+                    return;
+                }
+
+                if (settingsStore.appSettings.applicationLock || hasUserAppLockState()) {
+                    const appLockState = getUserAppLockState();
+
+                    if (!appLockState || appLockState.username !== data.result.user?.username) {
+                        clearCurrentTokenAndUserInfo(true);
+                        settingsStore.setEnableApplicationLock(false);
+                        settingsStore.setEnableApplicationLockWebAuthn(false);
+                        clearWebAuthnConfig();
+                    }
+                }
+
+                settingsStore.setApplicationSettingsFromCloudSettings(data.result.applicationCloudSettings);
+
+                updateCurrentToken(data.result.token);
+
+                if (data.result.user && isObject(data.result.user)) {
+                    userStore.storeUserBasicInfo(data.result.user);
+                }
+
+                refreshUserLlmConfig();
+
+                resolve(data.result);
+            }).catch(error => {
+                logger.error('failed to login by fnos', error);
+
+                if (error && error.processed) {
+                    reject(error);
+                } else if (error.response && error.response.data && error.response.data.errorMessage) {
+                    reject({ error: error.response.data });
+                } else {
+                    reject({ message: 'Unable to log in' });
+                }
+            });
+        });
+    }
+
     return {
         // states
         currentNotification,
@@ -658,6 +723,8 @@ export const useRootStore = defineStore('root', () => {
         generateOAuth2LinkUrl,
         authorize,
         authorize2FA,
+        authorizeByFnOS,
+        refreshUserLlmConfig,
         authorizeOAuth2,
         register,
         lock,

@@ -26,6 +26,8 @@ import ChartColorSchemeSettingsPage from '@/views/mobile/settings/ChartColorSche
 import AccountCategoryDisplayOrderSettingsPage from '@/views/mobile/settings/AccountCategoryDisplayOrderSettingsPage.vue';
 import ApplicationCloudSyncSettingsPage from '@/views/mobile/settings/ApplicationCloudSyncSettingsPage.vue';
 import BrowserCacheSettingPage from '@/views/mobile/settings/BrowserCacheSettingPage.vue';
+import SharedLedgerPage from '@/views/mobile/settings/SharedLedgerPage.vue';
+import AiModelSettingsPage from '@/views/mobile/settings/AiModelSettingsPage.vue';
 import AccountFilterSettingsPage from '@/views/mobile/settings/AccountFilterSettingsPage.vue';
 import CategoryFilterSettingsPage from '@/views/mobile/settings/CategoryFilterSettingsPage.vue';
 import TransactionTagFilterSettingsPage from '@/views/mobile/settings/TransactionTagFilterSettingsPage.vue';
@@ -261,6 +263,16 @@ const routes: Router.RouteParameters[] = [
     {
         path: '/settings/sync',
         async: asyncResolve(ApplicationCloudSyncSettingsPage),
+        beforeEnter: [checkLogin]
+    },
+    {
+        path: '/settings/shared_ledger',
+        async: asyncResolve(SharedLedgerPage),
+        beforeEnter: [checkLogin]
+    },
+    {
+        path: '/settings/ai_model',
+        async: asyncResolve(AiModelSettingsPage),
         beforeEnter: [checkLogin]
     },
     {

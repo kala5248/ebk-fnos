@@ -99,6 +99,7 @@
                                 </router-link>
                             </slot>
                         </div>
+                        <ledger-switcher class="me-3 d-none d-md-flex" />
                         <v-spacer />
                         <v-btn class="ms-2" color="primary" variant="text" density="comfortable"
                                :aria-label="tt('Use on Mobile Device')" :icon="true"
@@ -181,6 +182,7 @@
 
 <script setup lang="ts">
 import AboutDialog from '@/views/desktop/common/dialogs/AboutDialog.vue';
+import LedgerSwitcher from '@/components/desktop/LedgerSwitcher.vue';
 import SnackBar from '@/components/desktop/SnackBar.vue';
 
 import { ref, computed, useTemplateRef } from 'vue';

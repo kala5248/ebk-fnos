@@ -333,9 +333,17 @@ func startWebServer(c *core.CliContext) error {
 
 		apiRoute.GET("/logout.json", bindApiWithTokenUpdate(api.Tokens.TokenRevokeCurrentHandler, config))
 
+		fnosRoute := apiRoute.Group("/fnos")
+		fnosRoute.Use(bindMiddleware(middlewares.RequestId(config), config))
+		{
+			fnosRoute.GET("/auth_url.json", bindApi(api.FnOSAuthentications.FnOSAuthUrlHandler, config))
+			fnosRoute.POST("/login.json", bindApi(api.FnOSAuthentications.FnOSLoginHandler, config))
+		}
+
 		apiV1Route := apiRoute.Group("/v1")
 		apiV1Route.Use(bindMiddleware(middlewares.JWTAuthorizationByHeader(config), config))
 		apiV1Route.Use(bindMiddleware(middlewares.APITokenIpLimit(config), config))
+		apiV1Route.Use(bindMiddleware(middlewares.LedgerDataScope(config), config))
 		{
 			// Tokens
 			apiV1Route.GET("/tokens/list.json", bindApi(api.Tokens.TokenListHandler, config))
@@ -346,6 +354,20 @@ func startWebServer(c *core.CliContext) error {
 			apiV1Route.POST("/tokens/refresh.json", bindApiWithTokenUpdate(api.Tokens.TokenRefreshHandler, config))
 
 			// Users
+			apiV1Route.GET("/fnos/link_url.json", bindApi(api.FnOSAuthentications.FnOSAuthLinkUrlHandler, config, core.USER_TOKEN_TYPE_NORMAL))
+			apiV1Route.POST("/fnos/link.json", bindApi(api.FnOSAuthentications.FnOSLinkHandler, config, core.USER_TOKEN_TYPE_NORMAL))
+
+			apiV1Route.GET("/ledgers/list.json", bindApi(api.Ledgers.LedgerListHandler, config))
+			apiV1Route.POST("/ledgers/create.json", bindApi(api.Ledgers.LedgerCreateHandler, config, core.USER_TOKEN_TYPE_NORMAL))
+			apiV1Route.POST("/ledgers/join.json", bindApi(api.Ledgers.LedgerJoinHandler, config, core.USER_TOKEN_TYPE_NORMAL))
+			apiV1Route.POST("/ledgers/rename.json", bindApi(api.Ledgers.LedgerRenameHandler, config, core.USER_TOKEN_TYPE_NORMAL))
+			apiV1Route.POST("/ledgers/invite/regenerate.json", bindApi(api.Ledgers.LedgerInviteCodeRegenerateHandler, config, core.USER_TOKEN_TYPE_NORMAL))
+			apiV1Route.GET("/ledgers/members.json", bindApi(api.Ledgers.LedgerMemberListHandler, config))
+			apiV1Route.POST("/ledgers/members/role.json", bindApi(api.Ledgers.LedgerMemberRoleUpdateHandler, config, core.USER_TOKEN_TYPE_NORMAL))
+			apiV1Route.POST("/ledgers/members/remove.json", bindApi(api.Ledgers.LedgerMemberRemoveHandler, config, core.USER_TOKEN_TYPE_NORMAL))
+			apiV1Route.POST("/ledgers/leave.json", bindApi(api.Ledgers.LedgerLeaveHandler, config, core.USER_TOKEN_TYPE_NORMAL))
+			apiV1Route.POST("/ledgers/delete.json", bindApi(api.Ledgers.LedgerDeleteHandler, config, core.USER_TOKEN_TYPE_NORMAL))
+
 			apiV1Route.GET("/users/profile/get.json", bindApi(api.Users.UserProfileHandler, config))
 			apiV1Route.POST("/users/profile/update.json", bindApiWithTokenUpdate(api.Users.UserUpdateProfileHandler, config))
 
@@ -484,17 +506,15 @@ func startWebServer(c *core.CliContext) error {
 			apiV1Route.POST("/insights/explorers/delete.json", bindApi(api.InsightsExplorers.InsightsExplorerDeleteHandler, config))
 
 			// Large Language Models
-			if config.TextRecognitionLLMConfig != nil && config.TextRecognitionLLMConfig.LLMProvider != "" {
-				if config.TransactionFromAITextRecognition {
-					apiV1Route.POST("/llm/transactions/recognize_text.json", bindApi(api.LargeLanguageModels.RecognizeTransactionTextHandler, config))
-				}
-			}
+			// Per-user large language model configuration is always available, the recognition handlers
+			// resolve the model configuration of the current login user first and fall back to the global one.
+			apiV1Route.GET("/llm/user_config/get.json", bindApi(api.UserLlmConfigs.UserLlmConfigGetHandler, config, core.USER_TOKEN_TYPE_NORMAL))
+			apiV1Route.POST("/llm/user_config/save.json", bindApi(api.UserLlmConfigs.UserLlmConfigSaveHandler, config, core.USER_TOKEN_TYPE_NORMAL))
+			apiV1Route.POST("/llm/user_config/delete.json", bindApi(api.UserLlmConfigs.UserLlmConfigDeleteHandler, config, core.USER_TOKEN_TYPE_NORMAL))
+			apiV1Route.POST("/llm/user_config/test.json", bindApi(api.UserLlmConfigs.UserLlmConfigTestHandler, config, core.USER_TOKEN_TYPE_NORMAL))
 
-			if config.ReceiptImageRecognitionLLMConfig != nil && config.ReceiptImageRecognitionLLMConfig.LLMProvider != "" {
-				if config.TransactionFromAIImageRecognition {
-					apiV1Route.POST("/llm/transactions/recognize_receipt_image.json", bindApi(api.LargeLanguageModels.RecognizeReceiptImageHandler, config))
-				}
-			}
+			apiV1Route.POST("/llm/transactions/recognize_text.json", bindApi(api.LargeLanguageModels.RecognizeTransactionTextHandler, config))
+			apiV1Route.POST("/llm/transactions/recognize_receipt_image.json", bindApi(api.LargeLanguageModels.RecognizeReceiptImageHandler, config))
 
 			if config.CodingAssistantLLMConfig != nil && config.CodingAssistantLLMConfig.LLMProvider != "" {
 				if config.InsightsExplorerCodingAssistant {

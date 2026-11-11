@@ -71,6 +71,11 @@
                             :href="oauth2LoginUrl" :text="oauth2LoginDisplayName"
                             @click="loginByOAuth2" v-if="isOAuth2Enabled()"></f7-list-button>
 
+            <f7-list-button class="login-page-secondary-action margin-horizontal"
+                            :class="{ 'disabled': loggingInByPassword || loggingInByOAuth2 || loggingInByFnOS }"
+                            :text="tt('Log in with fnOS')"
+                            @click="loginByFnOS" v-if="isFnOSAuthEnabled()"></f7-list-button>
+
             <f7-list-item class="login-page-utilities login-page-utilities-centered" v-if="!isInternalAuthEnabled()">
                 <template #title>
                     <small>
@@ -214,8 +219,10 @@ import {
     isUserForgetPasswordEnabled,
     isUserVerifyEmailEnabled,
     isInternalAuthEnabled,
-    isOAuth2Enabled
+    isOAuth2Enabled,
+    isFnOSAuthEnabled
 } from '@/lib/server_settings.ts';
+import services from '@/lib/services.ts';
 import { getDesktopVersionPath } from '@/lib/version.ts';
 import { useI18nUIComponents, showLoading, hideLoading, isModalShowing } from '@/lib/ui/mobile.ts';
 
@@ -224,7 +231,7 @@ const props = defineProps<{
 }>();
 
 const { tt } = useI18n();
-const { showAlert, showConfirm, showToast, openExternalUrl } = useI18nUIComponents();
+const { showAlert, showConfirm, showPrompt, showToast, openExternalUrl } = useI18nUIComponents();
 
 const rootStore = useRootStore();
 
@@ -254,6 +261,9 @@ const hasValidEmailVerifyToken = ref<boolean>(false);
 const currentPasswordForResendVerifyEmail = ref<string>('');
 const requestingForgetPassword = ref<boolean>(false);
 const requestingResendVerifyEmail = ref<boolean>(false);
+const loggingInByFnOS = ref<boolean>(false);
+const fnosState = ref<string>('');
+
 const show2faSheet = ref<boolean>(false);
 const showForgetPasswordSheet = ref<boolean>(false);
 const showVerifyEmailSheet = ref<boolean>(false);
@@ -340,6 +350,77 @@ function loginByPressEnter(): void {
 function loginByOAuth2(): void {
     loggingInByOAuth2.value = true;
     showLoading();
+}
+
+function loginByFnOS(): void {
+    if (loggingInByFnOS.value) {
+        return;
+    }
+
+    loggingInByFnOS.value = true;
+    showLoading();
+
+    services.getFnOSAuthUrl().then(response => {
+        hideLoading();
+
+        const result = response.data ? response.data.result : null;
+
+        if (!result) {
+            loggingInByFnOS.value = false;
+            showToast(tt('Unable to start fnOS authorization'));
+            return;
+        }
+
+        fnosState.value = result.state;
+
+        showConfirm(tt('Open the authorization page of your fnOS device, sign in, then copy the one-time authorization code shown on that page.'),
+            () => {
+                openExternalUrl(result.url);
+
+                setTimeout(() => {
+                    showPrompt(tt('Authorization Code'), '', code => {
+                        confirmFnOSLogin(code);
+                    }, () => {
+                        loggingInByFnOS.value = false;
+                    });
+                }, 400);
+            },
+            () => {
+                loggingInByFnOS.value = false;
+            });
+    }).catch(error => {
+        hideLoading();
+        loggingInByFnOS.value = false;
+        showToast(error.message || error);
+    });
+}
+
+function confirmFnOSLogin(code: string): void {
+    if (!code || !fnosState.value) {
+        loggingInByFnOS.value = false;
+        return;
+    }
+
+    showLoading();
+
+    rootStore.authorizeByFnOS({ state: fnosState.value, code: code }).then(authResponse => {
+        hideLoading();
+        loggingInByFnOS.value = false;
+        doAfterLogin(authResponse);
+        props.f7router.refreshPage();
+    }).catch(error => {
+        hideLoading();
+        loggingInByFnOS.value = false;
+
+        if (error && error.message === 'Unable to log in') {
+            showToast(tt('The authorization code is invalid or has expired'));
+            return;
+        }
+
+        if (!error.processed) {
+            showToast(error.message || error);
+        }
+    });
 }
 
 function verify(): void {
