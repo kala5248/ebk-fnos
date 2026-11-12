@@ -6,6 +6,7 @@ import (
 
 	"github.com/mayswind/ezbookkeeping/pkg/core"
 	"github.com/mayswind/ezbookkeeping/pkg/datastore"
+	"xorm.io/xorm"
 	"github.com/mayswind/ezbookkeeping/pkg/errs"
 	"github.com/mayswind/ezbookkeeping/pkg/models"
 	"github.com/mayswind/ezbookkeeping/pkg/settings"
@@ -84,7 +85,7 @@ func (s *UserLlmConfigService) SaveUserLlmConfig(c core.Context, uid int64, req 
 	apiKey := strings.TrimSpace(req.ApiKey)
 
 	if apiKey != "" {
-		encryptedApiKey, err = utils.EncryptSecretToBase64(apiKey, s.CurrentConfig().SecretKey)
+		encryptedApiKey, err = utils.EncryptSecret(apiKey, s.CurrentConfig().SecretKey)
 
 		if err != nil {
 			return nil, err
@@ -103,7 +104,7 @@ func (s *UserLlmConfigService) SaveUserLlmConfig(c core.Context, uid int64, req 
 		UpdatedUnixTime:        time.Now().Unix(),
 	}
 
-	err = s.UserDB().DoTransaction(c, func(sess datastore.DatabaseSession) error {
+	err = s.UserDB().DoTransaction(c, func(sess *xorm.Session) error {
 		if existed == nil {
 			_, err := sess.Insert(llmConfig)
 			return err
@@ -152,7 +153,7 @@ func (s *UserLlmConfigService) ResolveLLMConfig(c core.Context, uid int64, image
 		return nil, llmConfig, nil
 	}
 
-	apiKey, err := utils.DecryptSecretFromBase64(llmConfig.ApiKey, s.CurrentConfig().SecretKey)
+	apiKey, err := utils.DecryptSecret(llmConfig.ApiKey, s.CurrentConfig().SecretKey)
 
 	if err != nil {
 		return nil, llmConfig, err
@@ -179,7 +180,7 @@ func (s *UserLlmConfigService) ToUserLlmConfigResponse(llmConfig *models.UserLlm
 	hasApiKey := llmConfig.ApiKey != ""
 
 	if hasApiKey {
-		apiKey, err := utils.DecryptSecretFromBase64(llmConfig.ApiKey, s.CurrentConfig().SecretKey)
+		apiKey, err := utils.DecryptSecret(llmConfig.ApiKey, s.CurrentConfig().SecretKey)
 
 		if err == nil && len(apiKey) > 4 {
 			apiKeyMasked = "*" + apiKey[len(apiKey)-4:]

@@ -7,6 +7,7 @@ import (
 
 	"github.com/mayswind/ezbookkeeping/pkg/core"
 	"github.com/mayswind/ezbookkeeping/pkg/datastore"
+	"xorm.io/xorm"
 	"github.com/mayswind/ezbookkeeping/pkg/errs"
 	"github.com/mayswind/ezbookkeeping/pkg/log"
 	"github.com/mayswind/ezbookkeeping/pkg/models"
@@ -251,7 +252,7 @@ func (s *LedgerService) CreateLedger(c core.Context, uid int64, name string) (*m
 		UpdatedUnixTime: time.Now().Unix(),
 	}
 
-	err = s.UserDB().DoTransaction(c, func(sess datastore.DatabaseSession) error {
+	err = s.UserDB().DoTransaction(c, func(sess *xorm.Session) error {
 		_, err := sess.Insert(ledger)
 
 		if err != nil {
@@ -332,7 +333,7 @@ func (s *LedgerService) JoinLedger(c core.Context, uid int64, inviteCode string)
 		UpdatedUnixTime: time.Now().Unix(),
 	}
 
-	err = s.UserDB().DoTransaction(c, func(sess datastore.DatabaseSession) error {
+	err = s.UserDB().DoTransaction(c, func(sess *xorm.Session) error {
 		_, err := sess.Insert(member)
 		return err
 	})

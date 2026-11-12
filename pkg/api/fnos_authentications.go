@@ -52,8 +52,7 @@ var (
 				container: settings.Container,
 			},
 			ApiUsingAvatarProvider: ApiUsingAvatarProvider{
-				avatarProvider: avatars.Container,
-				tokens:         services.Tokens,
+				container: avatars.Container,
 			},
 		},
 		users:             services.Users,
@@ -221,7 +220,7 @@ func (a *FnOSAuthenticationsApi) FnOSLoginHandler(c *core.WebContext) (any, *err
 
 	_ = externalAuth
 
-	token, claims, tokenRecord, err := a.tokens.CreateToken(c, user)
+	token, claims, err := a.tokens.CreateToken(c, user)
 
 	if err != nil {
 		log.Errorf(c, "[fnos_authentications.FnOSLoginHandler] failed to create token for user \"uid:%d\", because %s", user.Uid, err.Error())
@@ -230,13 +229,8 @@ func (a *FnOSAuthenticationsApi) FnOSLoginHandler(c *core.WebContext) (any, *err
 
 	c.SetTextualToken(token)
 	c.SetTokenClaims(claims)
-	c.SetTokenRecord(tokenRecord)
 
-	userBasicInfo, err := a.GetUserBasicInfo(c, user)
-
-	if err != nil {
-		return nil, errs.Or(err, errs.ErrOperationFailed)
-	}
+	userBasicInfo := a.GetUserBasicInfo(user)
 
 	go func() {
 		_ = a.users.UpdateUserLastLoginTime(c, user.Uid)
