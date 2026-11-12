@@ -142,6 +142,7 @@ type Transaction struct {
 	GeoLongitude         float64           `xorm:"INDEX(IDX_transaction_uid_deleted_time_longitude_latitude)"`
 	GeoLatitude          float64           `xorm:"INDEX(IDX_transaction_uid_deleted_time_longitude_latitude)"`
 	CreatedIp            string            `xorm:"VARCHAR(39)"`
+	CreatedUid           int64             `xorm:"NOT NULL DEFAULT 0"`
 	ScheduledCreated     bool
 	CreatedUnixTime      int64
 	UpdatedUnixTime      int64
@@ -438,6 +439,8 @@ type TransactionInfoResponse struct {
 	Pictures             TransactionPictureInfoBasicResponseSlice `json:"pictures,omitempty"`
 	Comment              string                                   `json:"comment"`
 	GeoLocation          *TransactionGeoLocationResponse          `json:"geoLocation,omitempty"`
+	CreatedUserId        int64                                    `json:"createdUserId,string,omitempty"`
+	CreatedUserName      string                                   `json:"createdUserName,omitempty"`
 	Editable             bool                                     `json:"editable"`
 }
 
@@ -686,6 +689,7 @@ func (t *Transaction) ToTransactionInfoResponse(tagIds []int64, editable bool) *
 		TagIds:               utils.Int64ArrayToStringArray(tagIds),
 		Comment:              t.Comment,
 		GeoLocation:          geoLocation,
+		CreatedUserId:        t.CreatedUid,
 		Editable:             editable,
 	}
 }

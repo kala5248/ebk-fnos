@@ -59,11 +59,6 @@
                                     {{ tt('Add') }}
                                     <v-menu activator="parent" max-height="500" :open-on-hover="true" v-if="isTransactionFromAITextRecognitionEnabled() || isTransactionFromAIImageRecognitionEnabled() || (allTransactionTemplates && allTransactionTemplates.length)">
                                         <v-list>
-                                            <v-list-item key="AIClipboardTextRecognition"
-                                                         :title="tt('AI Clipboard Text Recognition')"
-                                                         :prepend-icon="mdiMagicStaff"
-                                                         v-if="isTransactionFromAITextRecognitionEnabled()"
-                                                         @click="addByRecognizingClipboardText"></v-list-item>
                                             <v-list-item key="AIImageRecognition"
                                                          :title="tt('AI Image Recognition')"
                                                          :prepend-icon="mdiMagicStaff"
@@ -76,6 +71,13 @@
                                                          @click="add(template)"></v-list-item>
                                         </v-list>
                                     </v-menu>
+                                </v-btn>
+                                <v-btn class="ms-3" color="primary" variant="tonal"
+                                       :disabled="loading || !canAddTransaction"
+                                       v-if="isTransactionFromAITextRecognitionEnabled()"
+                                       @click="openAiTextRecognitionDialog">
+                                    <v-icon :icon="mdiMagicStaff" class="me-1" />
+                                    {{ tt('AI Accounting') }}
                                 </v-btn>
                                 <v-btn class="ms-3" color="default" variant="outlined"
                                        :disabled="loading" @click="importTransaction"
@@ -603,7 +605,14 @@
                                                 v-if="!transaction.tagIds || !transaction.tagIds.length"/>
                                     </td>
                                     <td class="transaction-table-column-description text-truncate">
-                                        {{ transaction.comment }}
+                                        <div class="d-flex align-center">
+                                            <span class="text-truncate">{{ transaction.comment }}</span>
+                                            <span class="transaction-creator text-caption text-medium-emphasis ms-2 text-no-wrap"
+                                                  v-if="showTransactionCreator(transaction)">
+                                                <v-icon :icon="mdiAccountOutline" size="14" class="me-1" />
+                                                {{ transaction.createdUserName }}
+                                            </span>
+                                        </div>
                                     </td>
                                 </tr>
                             </tbody>
@@ -665,6 +674,31 @@
             </v-window>
         </template>
     </main-page-layout>
+
+    <v-dialog v-model="showAiTextDialog" width="560">
+        <v-card>
+            <v-card-title class="d-flex align-center">
+                <v-icon :icon="mdiMagicStaff" class="me-2" />
+                {{ tt('AI Accounting') }}
+            </v-card-title>
+            <v-card-text>
+                <div class="text-body-2 text-medium-emphasis mb-3">{{ tt('Enter one sentence and AI will recognize it, then you can confirm the transaction in the form below.') }}</div>
+                <v-textarea autofocus
+                            persistent-placeholder
+                            rows="3"
+                            :label="tt('Transaction Description')"
+                            :placeholder="tt('For example: Lunch yesterday cost 35 yuan')"
+                            v-model="aiTextInput"
+                            @keydown.ctrl.enter="submitAiTextRecognition"
+                            @keydown.meta.enter="submitAiTextRecognition" />
+            </v-card-text>
+            <v-card-actions>
+                <v-spacer />
+                <v-btn color="default" variant="text" @click="closeAiTextRecognitionDialog">{{ tt('Cancel') }}</v-btn>
+                <v-btn color="primary" :disabled="!aiTextInput || !aiTextInput.trim()" @click="submitAiTextRecognition">{{ tt('Recognize') }}</v-btn>
+            </v-card-actions>
+        </v-card>
+    </v-dialog>
 
     <date-range-selection-dialog :title="tt('Custom Date Range')"
                                  :min-time="customMinDatetime"
@@ -753,7 +787,6 @@ import { type Transaction, TransactionTagFilter } from '@/models/transaction.ts'
 import type { TransactionTemplate } from '@/models/transaction_template.ts';
 
 import {
-    isFunction,
     isDefined,
     isObject,
     isString,
@@ -793,6 +826,7 @@ import {
     isTransactionFromAIImageRecognitionEnabled
 } from '@/lib/server_settings.ts';
 import { scrollToSelectedItem, startDownloadFile } from '@/lib/ui/common.ts';
+import { getCurrentLedgerId } from '@/lib/ledger.ts';
 import logger from '@/lib/logger.ts';
 
 import {
@@ -810,7 +844,8 @@ import {
     mdiPound,
     mdiMagicStaff,
     mdiTextBoxOutline,
-    mdiTextBoxEditOutline
+    mdiTextBoxEditOutline,
+    mdiAccountOutline
 } from '@mdi/js';
 
 interface TransactionListProps {
@@ -1607,7 +1642,7 @@ function changeAmountFilter(filterType: string): void {
     updateUrlWhenChanged(changed);
 }
 
-function add(template?: TransactionTemplate, autoRecognizeClipboardText?: string): void {
+function add(template?: TransactionTemplate, autoRecognizeClipboardText?: string, forceRecognizeText?: boolean): void {
     const currentUnixTime = getCurrentUnixTime();
 
     let newTransactionTime: number | undefined = undefined;
@@ -1627,7 +1662,8 @@ function add(template?: TransactionTemplate, autoRecognizeClipboardText?: string
         accountId: queryAllFilterAccountIdsCount.value === 1 ? query.value.accountIds : '',
         tagIds: objectFieldWithValueToArrayItem(queryAllFilterTagIds.value, true).join(',') || '',
         template: template,
-        autoRecognizeClipboardText: autoRecognizeClipboardText
+        autoRecognizeClipboardText: autoRecognizeClipboardText,
+        forceRecognizeText: forceRecognizeText
     }).then(result => {
         if (result && result.message) {
             snackbar.value?.showMessage(result.message);
@@ -1641,18 +1677,32 @@ function add(template?: TransactionTemplate, autoRecognizeClipboardText?: string
     });
 }
 
-function addByRecognizingClipboardText(): void {
-    if (navigator.clipboard && isFunction(navigator.clipboard.readText)) {
-        navigator.clipboard.readText().then(text => {
-            const clipboardText = text && text.trim() ? text.trim() : '';
-            add(undefined, clipboardText);
-        }).catch(error => {
-            logger.error('failed to read clipboard', error);
-            add(undefined, '');
-        });
-    } else {
-        add(undefined, '');
+const showAiTextDialog = ref<boolean>(false);
+const aiTextInput = ref<string>('');
+
+function openAiTextRecognitionDialog(): void {
+    aiTextInput.value = '';
+    showAiTextDialog.value = true;
+}
+
+function closeAiTextRecognitionDialog(): void {
+    showAiTextDialog.value = false;
+}
+
+function submitAiTextRecognition(): void {
+    const text = aiTextInput.value && aiTextInput.value.trim() ? aiTextInput.value.trim() : '';
+
+    if (!text) {
+        return;
     }
+
+    showAiTextDialog.value = false;
+    add(undefined, text, true);
+}
+
+function showTransactionCreator(transaction: Transaction): boolean {
+    const ledgerId = getCurrentLedgerId();
+    return !!transaction.createdUserName && !!ledgerId && ledgerId !== '0';
 }
 
 function addByRecognizingImage(): void {

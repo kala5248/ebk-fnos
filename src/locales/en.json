@@ -3066,5 +3066,9 @@
     "The invite code will be reset and the old one will no longer be usable. Are you sure?": "The invite code will be reset and the old one will no longer be usable. Are you sure?",
     "Remove this member from the shared ledger?": "Remove this member from the shared ledger?",
     "Your AI model configuration will be removed. Are you sure?": "Your AI model configuration will be removed. Are you sure?",
-    "The configuration is stored per user and encrypted on the server.": "The configuration is stored per user and encrypted on the server."
+    "The configuration is stored per user and encrypted on the server.": "The configuration is stored per user and encrypted on the server.",
+    "AI Accounting": "AI Accounting",
+    "Enter one sentence and AI will recognize it, then you can confirm the transaction in the form below.": "Enter one sentence and AI will recognize it, then you can confirm the transaction in the form below.",
+    "Transaction Description": "Transaction Description",
+    "For example: Lunch yesterday cost 35 yuan": "For example: Lunch yesterday cost 35 yuan"
 }

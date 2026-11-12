@@ -1315,7 +1315,7 @@ func (a *TransactionsApi) TransactionCreateHandler(c *core.WebContext) (any, *er
 		return nil, errs.ErrUserNotFound
 	}
 
-	transaction := a.createNewTransactionModel(uid, &transactionCreateReq, c.ClientIP())
+	transaction := a.createNewTransactionModel(uid, c.GetCurrentLoginUid(), &transactionCreateReq, c.ClientIP())
 
 	allUsedAccounts, err := a.getTransactionUsedAccounts(c, uid, []*models.Transaction{transaction})
 
@@ -2875,7 +2875,7 @@ func (a *TransactionsApi) TransactionImportHandler(c *core.WebContext) (any, *er
 
 	for i := 0; i < len(transactionImportReq.Transactions); i++ {
 		transactionCreateReq := transactionImportReq.Transactions[i]
-		transaction := a.createNewTransactionModel(uid, transactionCreateReq, c.ClientIP())
+		transaction := a.createNewTransactionModel(uid, c.GetCurrentLoginUid(), transactionCreateReq, c.ClientIP())
 		newTransactions[i] = transaction
 	}
 
@@ -3182,6 +3182,7 @@ func (a *TransactionsApi) getTransactionUsedAccounts(c *core.WebContext, uid int
 
 func (a *TransactionsApi) getTransactionResponseListResult(c *core.WebContext, user *models.User, transactions []*models.Transaction, allAccounts map[int64]*models.Account, categoryMap map[int64]*models.TransactionCategory, tagMap map[int64]*models.TransactionTag, allTransactionTagIds map[int64][]int64, pictureInfoMap map[int64][]*models.TransactionPictureInfo, clientTimezone *time.Location, withPictures bool, trimAccount bool, trimCategory bool, trimTag bool) (models.TransactionInfoResponseSlice, error) {
 	result := make(models.TransactionInfoResponseSlice, len(transactions))
+	creatorNameCache := make(map[int64]string)
 
 	for i := 0; i < len(transactions); i++ {
 		transaction := transactions[i]
@@ -3193,6 +3194,33 @@ func (a *TransactionsApi) getTransactionResponseListResult(c *core.WebContext, u
 		transactionEditable := transaction.IsEditable(user, clientTimezone, allAccounts[transaction.AccountId], allAccounts[transaction.RelatedAccountId])
 		transactionTagIds := allTransactionTagIds[transaction.TransactionId]
 		result[i] = transaction.ToTransactionInfoResponse(transactionTagIds, transactionEditable)
+
+		creatorUid := transaction.CreatedUid
+
+		if creatorUid <= 0 {
+			creatorUid = transaction.Uid
+		}
+
+		if creatorUid > 0 {
+			result[i].CreatedUserId = creatorUid
+
+			if name, exists := creatorNameCache[creatorUid]; exists {
+				result[i].CreatedUserName = name
+			} else {
+				creator, err := a.users.GetUserById(c, creatorUid)
+
+				if err == nil && creator != nil {
+					name := creator.Nickname
+
+					if name == "" {
+						name = creator.Username
+					}
+
+					creatorNameCache[creatorUid] = name
+					result[i].CreatedUserName = name
+				}
+			}
+		}
 
 		if !trimAccount {
 			if sourceAccount := allAccounts[transaction.AccountId]; sourceAccount != nil {
@@ -3251,7 +3279,7 @@ func (a *TransactionsApi) setTransactionImportResult(uid int64, clientSessionId 
 	}
 }
 
-func (a *TransactionsApi) createNewTransactionModel(uid int64, transactionCreateReq *models.TransactionCreateRequest, clientIp string) *models.Transaction {
+func (a *TransactionsApi) createNewTransactionModel(uid int64, creatorUid int64, transactionCreateReq *models.TransactionCreateRequest, clientIp string) *models.Transaction {
 	var transactionDbType models.TransactionDbType
 
 	if transactionCreateReq.Type == models.TRANSACTION_TYPE_MODIFY_BALANCE {
@@ -3266,6 +3294,7 @@ func (a *TransactionsApi) createNewTransactionModel(uid int64, transactionCreate
 
 	transaction := &models.Transaction{
 		Uid:               uid,
+		CreatedUid:        creatorUid,
 		Type:              transactionDbType,
 		CategoryId:        transactionCreateReq.CategoryId,
 		TransactionTime:   utils.GetMinTransactionTimeFromUnixTime(transactionCreateReq.Time),

@@ -1,9 +1,11 @@
 package common
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
+	"unicode"
 
 	"github.com/mayswind/ezbookkeeping/pkg/core"
 	"github.com/mayswind/ezbookkeeping/pkg/errs"
@@ -65,7 +67,7 @@ func (p *CommonHttpLargeLanguageModelProvider) getTextualResponse(c core.Context
 
 	if err != nil {
 		log.Errorf(c, "[common_http_large_language_model_provider.getTextualResponse] failed to request large language model api for user \"uid:%d\", because %s", uid, err.Error())
-		return nil, errs.ErrFailedToRequestRemoteApi
+		return nil, newRemoteApiRequestError(err.Error())
 	}
 
 	defer resp.Body.Close()
@@ -73,10 +75,37 @@ func (p *CommonHttpLargeLanguageModelProvider) getTextualResponse(c core.Context
 
 	if resp.StatusCode != 200 {
 		log.Errorf(c, "[common_http_large_language_model_provider.getTextualResponse] failed to get large language model api response for user \"uid:%d\", because response code is %d", uid, resp.StatusCode)
-		return nil, errs.ErrFailedToRequestRemoteApi
+		return nil, newRemoteApiRequestError(fmt.Sprintf("http status %d, response: %s", resp.StatusCode, sanitizeRemoteResponse(body)))
 	}
 
 	return p.adapter.ParseTextualResponse(c, uid, body, responseType)
+}
+
+func sanitizeRemoteResponse(body []byte) string {
+	text := strings.Map(func(r rune) rune {
+		if unicode.IsControl(r) {
+			return ' '
+		}
+
+		return r
+	}, string(body))
+	text = strings.Join(strings.Fields(text), " ")
+
+	if len(text) > 200 {
+		text = text[:200] + "..."
+	}
+
+	return text
+}
+
+func newRemoteApiRequestError(detail string) error {
+	detail = strings.TrimSpace(detail)
+
+	if detail == "" {
+		return errs.ErrFailedToRequestRemoteApi
+	}
+
+	return errs.NewNormalError(errs.NormalSubcategoryGlobal, 5, http.StatusBadRequest, "failed to request third party api: "+detail)
 }
 
 // NewCommonHttpLargeLanguageModelProvider creates a http adapter based large language model provider instance

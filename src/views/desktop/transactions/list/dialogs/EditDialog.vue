@@ -586,6 +586,7 @@ export interface TransactionEditOptions extends SetTransactionOptions {
     currentTemplate?: TransactionTemplate;
     autoUploadPicture?: File;
     autoRecognizeClipboardText?: string;
+    forceRecognizeText?: boolean;
     noTransactionDraft?: boolean;
 }
 
@@ -865,7 +866,7 @@ function open(options: TransactionEditOptions): Promise<TransactionEditResponse 
         if (isDefined(options.autoRecognizeClipboardText)) {
             pastedText.value = options.autoRecognizeClipboardText;
 
-            if (pastedText.value && !settingsStore.appSettings.alwaysRequireConfirmationOfClipboardContentBeforeSubmission) {
+            if (pastedText.value && (options.forceRecognizeText || !settingsStore.appSettings.alwaysRequireConfirmationOfClipboardContentBeforeSubmission)) {
                 recognizeText(pastedText.value);
             } else {
                 showPasteTextDialog.value = true;

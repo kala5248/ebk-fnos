@@ -3066,5 +3066,9 @@
     "The invite code will be reset and the old one will no longer be usable. Are you sure?": "邀请码将被重置，旧邀请码将无法继续使用，确定吗？",
     "Remove this member from the shared ledger?": "确定将该成员移出共享账本吗？",
     "Your AI model configuration will be removed. Are you sure?": "你的 AI 模型配置将被删除，确定吗？",
-    "The configuration is stored per user and encrypted on the server.": "配置按用户独立保存，并在服务端加密存储。"
+    "The configuration is stored per user and encrypted on the server.": "配置按用户独立保存，并在服务端加密存储。",
+    "AI Accounting": "AI 记账",
+    "Enter one sentence and AI will recognize it, then you can confirm the transaction in the form below.": "输入一句话，AI 识别后进入记账表单，确认无误后提交。",
+    "Transaction Description": "交易描述",
+    "For example: Lunch yesterday cost 35 yuan": "例如：昨天中午吃饭花了35元"
 }

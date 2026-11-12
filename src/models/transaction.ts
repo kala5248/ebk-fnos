@@ -29,6 +29,8 @@ export class Transaction implements TransactionInfoResponse {
     public hideAmount: boolean;
     public tagIds: string[];
     public comment: string;
+    public createdUserId?: string;
+    public createdUserName?: string;
     public editable: boolean;
 
     private _pictures?: TransactionPicture[];
@@ -333,6 +335,9 @@ export class Transaction implements TransactionInfoResponse {
             transactionResponse.comment,
             transactionResponse.editable
         );
+
+        transaction.createdUserId = transactionResponse.createdUserId;
+        transaction.createdUserName = transactionResponse.createdUserName;
 
         if (transactionResponse.category) {
             transaction.setCategory(TransactionCategory.of(transactionResponse.category));
@@ -679,6 +684,8 @@ export interface TransactionInfoResponse {
     readonly pictures?: TransactionPictureInfoBasicResponse[];
     readonly comment: string;
     readonly geoLocation?: TransactionGeoLocationResponse;
+    readonly createdUserId?: string;
+    readonly createdUserName?: string;
     readonly editable: boolean;
 }
 

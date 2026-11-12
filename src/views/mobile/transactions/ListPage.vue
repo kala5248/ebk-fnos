@@ -273,6 +273,9 @@
                                             <div class="transaction-description" v-if="transaction.comment">
                                                 <span>{{ transaction.comment }}</span>
                                             </div>
+                                            <div class="transaction-creator text-color-gray" v-if="showTransactionCreator(transaction)">
+                                                {{ transaction.createdUserName }}
+                                            </div>
                                         </div>
                                         <div class="item-footer">
                                             <div class="transaction-tags" v-if="showTagInTransactionListPage && transaction.tagIds && transaction.tagIds.length">
@@ -650,6 +653,7 @@ import type { Router } from 'framework7/types';
 
 import { useI18n } from '@/locales/helpers.ts';
 import { scrollToSelectedItem } from '@/lib/ui/common.ts';
+import { getCurrentLedgerId } from '@/lib/ledger.ts';
 import {
     type Framework7Dom,
     useI18nUIComponents,
@@ -725,6 +729,11 @@ const {
     getWeekdayShortName,
     formatNumberToLocalizedNumeralsWithoutDigitGrouping
 } = useI18n();
+
+function showTransactionCreator(transaction: Transaction): boolean {
+    const ledgerId = getCurrentLedgerId();
+    return !!transaction.createdUserName && !!ledgerId && ledgerId !== '0';
+}
 
 const { showAlert, showToast, routeBackOnError } = useI18nUIComponents();
 
