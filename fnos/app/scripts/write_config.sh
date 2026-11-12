@@ -81,6 +81,7 @@ sed \
     -e "s|^secret_key =.*|secret_key = ${SECRET}|" \
     -e "s|^enable_register = .*|enable_register = true|" \
     -e "s|^enable_fnos_auth = .*|enable_fnos_auth = ${ENABLE_FNOS}|" \
+    -e "s|^enable_fnos_gateway_auth = .*|enable_fnos_gateway_auth = true|" \
     -e "s|^fnos_base_url =.*|fnos_base_url = ${FNOAUTH_BASE}|" \
     -e "s|^fnos_client_id =.*|fnos_client_id = ${FNOAUTH_CLIENT_ID}|" \
     -e "s|^fnos_client_secret =.*|fnos_client_secret = ${FNOAUTH_CLIENT_SECRET}|" \

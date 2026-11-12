@@ -3,6 +3,9 @@ package api
 import (
 	"errors"
 	"fmt"
+	"net"
+	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -237,6 +240,82 @@ func (a *FnOSAuthenticationsApi) FnOSLoginHandler(c *core.WebContext) (any, *err
 	}()
 
 	log.Infof(c, "[fnos_authentications.FnOSLoginHandler] fnos user \"%s\" logged in as \"uid:%d\"", userInfo.UserName, user.Uid)
+
+	return &models.AuthResponse{
+		Token:   token,
+		Need2FA: false,
+		User:    userBasicInfo,
+	}, nil
+}
+
+// FnOSGatewayLoginHandler logs in the user identified by the fnOS unified gateway headers
+// The headers are trusted only when the request arrives through the application unix socket
+func (a *FnOSAuthenticationsApi) FnOSGatewayLoginHandler(c *core.WebContext) (any, *errs.Error) {
+	if !a.CurrentConfig().EnableFnOSGatewayAuth {
+		return nil, errs.ErrFnOSAuthNotEnabled
+	}
+
+	if _, ok := c.Request.Context().Value(http.LocalAddrContextKey).(*net.UnixAddr); !ok {
+		return nil, errs.ErrFnOSGatewayIdentityMissing
+	}
+
+	uidText := strings.TrimSpace(c.GetHeader("X-Trim-Userid"))
+	userName := strings.TrimSpace(c.GetHeader("X-Trim-Username"))
+	uid, err := strconv.ParseInt(uidText, 10, 64)
+
+	if err != nil || uid <= 0 || userName == "" {
+		return nil, errs.ErrFnOSGatewayIdentityMissing
+	}
+
+	userInfo := &fnos.FnOSUserInfo{
+		Uid:          uid,
+		UserName:     userName,
+		NickName:     userName,
+		IsAdmin:      strings.EqualFold(strings.TrimSpace(c.GetHeader("X-Trim-Isadmin")), "true"),
+		LanguageCode: parseClientLanguageCode(c.GetClientLocale()),
+	}
+
+	user, _, err := a.getOrCreateUser(c, userInfo)
+
+	if err != nil {
+		if !errs.IsCustomError(err) {
+			log.Warnf(c, "[fnos_authentications.FnOSGatewayLoginHandler] failed to get or create user, because %s", err.Error())
+		}
+
+		return nil, errs.Or(err, errs.ErrOperationFailed)
+	}
+
+	if user.Disabled {
+		return nil, errs.ErrFnOSUserIsDisabled
+	}
+
+	exists, err := a.twoFactors.ExistsTwoFactorSetting(c, user.Uid)
+
+	if err != nil {
+		return nil, errs.Or(err, errs.ErrOperationFailed)
+	}
+
+	if exists {
+		return nil, errs.ErrFnOSUserRequireTwoFactor
+	}
+
+	token, claims, err := a.tokens.CreateToken(c, user)
+
+	if err != nil {
+		log.Errorf(c, "[fnos_authentications.FnOSGatewayLoginHandler] failed to create token for user \"uid:%d\", because %s", user.Uid, err.Error())
+		return nil, errs.Or(err, errs.ErrTokenGenerating)
+	}
+
+	c.SetTextualToken(token)
+	c.SetTokenClaims(claims)
+
+	userBasicInfo := a.GetUserBasicInfo(user)
+
+	go func() {
+		_ = a.users.UpdateUserLastLoginTime(c, user.Uid)
+	}()
+
+	log.Infof(c, "[fnos_authentications.FnOSGatewayLoginHandler] fnos gateway user \"%s\" logged in as \"uid:%d\"", userName, user.Uid)
 
 	return &models.AuthResponse{
 		Token:   token,

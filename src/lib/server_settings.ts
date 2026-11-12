@@ -73,6 +73,10 @@ export function isTransactionFromAIImageRecognitionEnabled(): boolean {
     return getServerSetting('llmir') === 1 || isUserLlmImageRecognitionEnabled();
 }
 
+export function isFnOSGatewayAuthEnabled(): boolean {
+    return getServerSetting('nag') === 1;
+}
+
 export function isFnOSAuthEnabled(): boolean {
     return getServerSetting('n') === 1;
 }

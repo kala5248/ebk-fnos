@@ -1072,6 +1072,11 @@ export default {
             noAuth: true
         } as ApiRequestConfig);
     },
+    loginByFnOSGateway: (): ApiResponsePromise<AuthResponse> => {
+        return axios.post<ApiResponse<AuthResponse>>('fnos/gateway_login.json', {}, {
+            noAuth: true
+        } as ApiRequestConfig);
+    },
     getFnOSLinkUrl: (): ApiResponsePromise<FnOSAuthUrlResponse> => {
         return axios.get<ApiResponse<FnOSAuthUrlResponse>>('v1/fnos/link_url.json');
     },

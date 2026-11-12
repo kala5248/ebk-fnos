@@ -2,8 +2,11 @@ package cmd
 
 import (
 	"fmt"
+	"net"
 	"net/http"
+	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/gin-contrib/cache"
@@ -338,6 +341,7 @@ func startWebServer(c *core.CliContext) error {
 		{
 			fnosRoute.GET("/auth_url.json", bindApi(api.FnOSAuthentications.FnOSAuthUrlHandler, config))
 			fnosRoute.POST("/login.json", bindApi(api.FnOSAuthentications.FnOSLoginHandler, config))
+			fnosRoute.POST("/gateway_login.json", bindApi(api.FnOSAuthentications.FnOSGatewayLoginHandler, config))
 		}
 
 		apiV1Route := apiRoute.Group("/v1")
@@ -542,6 +546,10 @@ func startWebServer(c *core.CliContext) error {
 
 	listenAddr := fmt.Sprintf("%s:%d", config.HttpAddr, config.HttpPort)
 
+	if config.Protocol == settings.SCHEME_HTTP {
+		startFnOSGatewaySocket(c, config, router)
+	}
+
 	if config.Protocol == settings.SCHEME_SOCKET {
 		log.BootInfof(c, "[webserver.startWebServer] will run at socks:%s", config.UnixSocketPath)
 		err = router.RunUnix(config.UnixSocketPath)
@@ -561,6 +569,65 @@ func startWebServer(c *core.CliContext) error {
 	}
 
 	return nil
+}
+
+const fnOSGatewayPathPrefix = "/app/ebk-fnos"
+
+func isFnOSGatewayRequest(r *http.Request) bool {
+	_, ok := r.Context().Value(http.LocalAddrContextKey).(*net.UnixAddr)
+	return ok
+}
+
+// rewriteFnOSGatewayPath removes the fnOS unified gateway path prefix, the rewrite must happen before gin routes the request
+func rewriteFnOSGatewayPath(r *http.Request) {
+	if !isFnOSGatewayRequest(r) {
+		return
+	}
+
+	if strings.HasPrefix(r.URL.Path, fnOSGatewayPathPrefix) {
+		path := strings.TrimPrefix(r.URL.Path, fnOSGatewayPathPrefix)
+
+		if path == "" {
+			path = "/"
+		}
+
+		r.URL.Path = path
+		r.URL.RawPath = ""
+	}
+}
+
+func startFnOSGatewaySocket(c *core.CliContext, config *settings.Config, router *gin.Engine) {
+	appDest := strings.TrimSpace(os.Getenv("TRIM_APPDEST"))
+
+	if appDest == "" {
+		return
+	}
+
+	socketPath := filepath.Join(appDest, "app.sock")
+	_ = os.Remove(socketPath)
+
+	listener, err := net.Listen("unix", socketPath)
+
+	if err != nil {
+		log.BootWarnf(c, "[webserver.startFnOSGatewaySocket] cannot listen on %s, because %s", socketPath, err.Error())
+		return
+	}
+
+	_ = os.Chmod(socketPath, 0666)
+
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		rewriteFnOSGatewayPath(r)
+		router.ServeHTTP(w, r)
+	})
+	server := &http.Server{Handler: handler}
+
+	go func() {
+		if serveErr := server.Serve(listener); serveErr != nil {
+			log.BootWarnf(c, "[webserver.startFnOSGatewaySocket] gateway socket stopped, because %s", serveErr.Error())
+		}
+	}()
+
+	log.BootInfof(c, "[webserver.startFnOSGatewaySocket] gateway socket listening on %s", socketPath)
 }
 
 func bindMiddleware(fn core.MiddlewareHandlerFunc, config *settings.Config) gin.HandlerFunc {

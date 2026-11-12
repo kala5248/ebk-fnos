@@ -3,10 +3,12 @@
         "ebk-fnos.main": {
             "title": "ebk-fnos",
             "icon": "images/icon-{0}.png",
-            "type": "url",
-            "protocol": "http",
-            "port": "8080",
-            "url": "/",
+            "type": "iframe",
+            "protocol": "",
+            "port": "",
+            "gatewayPrefix": "/app/ebk-fnos",
+            "gatewaySocket": "app.sock",
+            "url": "/app/ebk-fnos/desktop",
             "allUsers": true
         }
     }

@@ -668,6 +668,65 @@ export const useRootStore = defineStore('root', () => {
         });
     }
 
+    function applyFnOSAuthResponse(data: { result: AuthResponse | null }): Promise<AuthResponse> {
+        return new Promise((resolve, reject) => {
+            if (!data.result || !data.result.token) {
+                reject({ message: 'Unable to log in' });
+                return;
+            }
+
+            const result = data.result;
+
+            if (settingsStore.appSettings.applicationLock || hasUserAppLockState()) {
+                const appLockState = getUserAppLockState();
+
+                if (!appLockState || appLockState.username !== result.user?.username) {
+                    clearCurrentTokenAndUserInfo(true);
+                    settingsStore.setEnableApplicationLock(false);
+                    settingsStore.setEnableApplicationLockWebAuthn(false);
+                    clearWebAuthnConfig();
+                }
+            }
+
+            settingsStore.setApplicationSettingsFromCloudSettings(result.applicationCloudSettings);
+
+            updateCurrentToken(result.token);
+
+            if (result.user && isObject(result.user)) {
+                userStore.storeUserBasicInfo(result.user);
+            }
+
+            refreshUserLlmConfig();
+
+            resolve(result);
+        });
+    }
+
+    function authorizeByFnOSGateway(): Promise<AuthResponse> {
+        return new Promise((resolve, reject) => {
+            services.loginByFnOSGateway().then(response => {
+                const data = response.data;
+
+                if (!data || !data.success || !data.result || !data.result.token) {
+                    reject({ message: 'Unable to log in' });
+                    return;
+                }
+
+                applyFnOSAuthResponse(data).then(resolve).catch(reject);
+            }).catch(error => {
+                logger.error('failed to login by fnos gateway', error);
+
+                if (error && error.processed) {
+                    reject(error);
+                } else if (error.response && error.response.data && error.response.data.errorMessage) {
+                    reject({ error: error.response.data });
+                } else {
+                    reject({ message: 'Unable to log in' });
+                }
+            });
+        });
+    }
+
     function authorizeByFnOS({ state, code }: { state: string, code: string }): Promise<AuthResponse> {
         return new Promise((resolve, reject) => {
             services.loginByFnOS({ state: state, code: code }).then(response => {
@@ -724,6 +783,7 @@ export const useRootStore = defineStore('root', () => {
         authorize,
         authorize2FA,
         authorizeByFnOS,
+        authorizeByFnOSGateway,
         refreshUserLlmConfig,
         authorizeOAuth2,
         register,

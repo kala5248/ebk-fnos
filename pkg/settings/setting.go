@@ -428,26 +428,27 @@ type Config struct {
 	MaxFailuresPerUserPerMinute           uint32
 
 	// Auth
-	EnableInternalAuth                bool
-	EnableOAuth2Login                 bool
-	EnableTwoFactor                   bool
-	EnableUserForgetPassword          bool
-	ForgetPasswordRequireVerifyEmail  bool
-	OAuth2ClientID                    string
-	OAuth2ClientSecret                string
-	OAuth2UsePKCE                     bool
-	OAuth2UserIdentifier              string
-	OAuth2AutoRegister                bool
-	OAuth2Provider                    string
+	EnableInternalAuth               bool
+	EnableOAuth2Login                bool
+	EnableTwoFactor                  bool
+	EnableUserForgetPassword         bool
+	ForgetPasswordRequireVerifyEmail bool
+	OAuth2ClientID                   string
+	OAuth2ClientSecret               string
+	OAuth2UsePKCE                    bool
+	OAuth2UserIdentifier             string
+	OAuth2AutoRegister               bool
+	OAuth2Provider                   string
 
-	EnableFnOSAuth      bool
-	FnOSBaseUrl         string
-	FnOSClientId        string
-	FnOSClientSecret    string
-	FnOSScope           string
-	FnOSAutoRegister    bool
-	FnOSRequestTimeout  uint32
-	FnOSSkipTLSVerify   bool
+	EnableFnOSAuth                    bool
+	EnableFnOSGatewayAuth             bool
+	FnOSBaseUrl                       string
+	FnOSClientId                      string
+	FnOSClientSecret                  string
+	FnOSScope                         string
+	FnOSAutoRegister                  bool
+	FnOSRequestTimeout                uint32
+	FnOSSkipTLSVerify                 bool
 	OAuth2StateExpiredTime            uint32
 	OAuth2StateExpiredTimeDuration    time.Duration
 	OAuth2RequestTimeout              uint32
@@ -1187,6 +1188,7 @@ func loadAuthConfiguration(config *Config, configFile *ini.File, sectionName str
 	}
 
 	config.EnableFnOSAuth = getConfigItemBoolValue(configFile, sectionName, "enable_fnos_auth", false)
+	config.EnableFnOSGatewayAuth = getConfigItemBoolValue(configFile, sectionName, "enable_fnos_gateway_auth", false)
 	config.FnOSBaseUrl = strings.TrimRight(getConfigItemStringValue(configFile, sectionName, "fnos_base_url"), "/")
 	config.FnOSClientId = getConfigItemStringValue(configFile, sectionName, "fnos_client_id")
 	config.FnOSClientSecret = getConfigItemStringValue(configFile, sectionName, "fnos_client_secret")

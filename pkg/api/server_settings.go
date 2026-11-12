@@ -51,6 +51,7 @@ func (a *ServerSettingsApi) ServerSettingsJavascriptHandler(c *core.WebContext) 
 	a.appendBooleanSetting(builder, "e", config.EnableDataExport)
 	a.appendBooleanSetting(builder, "i", config.EnableDataImport)
 	a.appendBooleanSetting(builder, "n", config.EnableFnOSAuth)
+	a.appendBooleanSetting(builder, "nag", config.EnableFnOSGatewayAuth)
 
 	a.appendStringSetting(builder, "op", config.OAuth2Provider)
 

@@ -220,7 +220,8 @@ import {
     isUserVerifyEmailEnabled,
     isInternalAuthEnabled,
     isOAuth2Enabled,
-    isFnOSAuthEnabled
+    isFnOSAuthEnabled,
+    isFnOSGatewayAuthEnabled
 } from '@/lib/server_settings.ts';
 import services from '@/lib/services.ts';
 import { getDesktopVersionPath } from '@/lib/version.ts';
@@ -526,6 +527,15 @@ function switch2FAVerifyType(): void {
 }
 
 oauth2ClientSessionId.value = generateRandomUUID();
+
+if (isFnOSGatewayAuthEnabled()) {
+    rootStore.authorizeByFnOSGateway().then(authResponse => {
+        doAfterLogin(authResponse);
+        props.f7router.refreshPage();
+    }).catch(() => {
+        // the request does not carry fnOS gateway identity headers, fall back to the normal login form
+    });
+}
 </script>
 
 <style>
