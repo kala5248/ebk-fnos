@@ -114,8 +114,23 @@ if command -v fnpack >/dev/null 2>&1; then
         exit 1
     fi
 else
-    echo "==> 未检测到 fnpack，使用 tar.gz 兼容打包"
-    tar -czf "${OUT_DIR}/${FPK_NAME}" -C "${BUILD_DIR}" manifest ICON.PNG ICON_256.PNG LICENSE app cmd config wizard
+    # fpk = tar.gz(包根文件 + app.tgz)，app.tgz 是 app/ 目录内容的压缩包，
+    # manifest.checksum = md5(app.tgz)。直接把 app/ 目录放进外层会导致
+    # 安装器报「解压 app.tgz 失败」。
+    echo "==> 生成 app.tgz"
+    cp LICENSE "${BUILD_DIR}/app/LICENSE" 2>/dev/null || true
+    tar -czf "${BUILD_DIR}/app.tgz" -C "${BUILD_DIR}/app" $(cd "${BUILD_DIR}/app" && ls -A)
+    CHECKSUM="$(md5sum "${BUILD_DIR}/app.tgz" | awk '{print $1}')"
+
+    if grep -q '^checksum' "${BUILD_DIR}/manifest"; then
+        sed -i "s|^checksum.*|checksum = ${CHECKSUM}|" "${BUILD_DIR}/manifest"
+    else
+        printf '\nchecksum = %s\n' "${CHECKSUM}" >> "${BUILD_DIR}/manifest"
+    fi
+
+    echo "==> 使用 tar.gz 打包（app.tgz 模式，checksum=${CHECKSUM}）"
+    rm -rf "${BUILD_DIR}/app" 2>/dev/null || true
+    tar -czf "${OUT_DIR}/${FPK_NAME}" -C "${BUILD_DIR}" manifest ICON.PNG ICON_256.PNG app.tgz cmd config wizard
 fi
 
 echo "==> 完成：${OUT_DIR}/${FPK_NAME}"
