@@ -91,7 +91,7 @@
                 "type": "switch",
                 "field": "wizard_enable_fnos_auth",
                 "label": "启用飞牛账号授权登录",
-                "initValue": false
+                "initValue": "false"
             },
             {
                 "type": "text",

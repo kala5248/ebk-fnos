@@ -23,6 +23,12 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Install fnpack
+        run: |
+          curl -fsSL -o /usr/local/bin/fnpack https://static2.fnnas.com/fnpack/fnpack-1.2.3-linux-amd64
+          chmod +x /usr/local/bin/fnpack
+          fnpack --help
+
       - name: Install frontend dependencies
         run: npm ci
 
