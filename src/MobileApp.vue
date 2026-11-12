@@ -28,6 +28,7 @@ import { isProduction } from '@/lib/version.ts';
 import { getTheme, isEnableSwipeBack, isEnableAnimate } from '@/lib/settings.ts';
 import { initMapProvider } from '@/lib/map/index.ts';
 import { isUserLogined, isUserUnlocked } from '@/lib/userstate.ts';
+import { isFnOSGatewayAuthEnabled } from '@/lib/server_settings.ts';
 import { updateMapCacheExpiration } from '@/lib/cache.ts';
 import { setExpenseAndIncomeAmountColor } from '@/lib/ui/common.ts';
 import { isiOSHomeScreenMode, isModalShowing, setAppFontSize } from '@/lib/ui/mobile.ts';
@@ -35,6 +36,18 @@ import { isiOSHomeScreenMode, isModalShowing, setAppFontSize } from '@/lib/ui/mo
 const { tt, getCurrentLanguageInfo, setLanguage, initLocale } = useI18n();
 
 const rootStore = useRootStore();
+
+function syncFnOSGatewayUser(): void {
+    if (!isUserLogined() || !isFnOSGatewayAuthEnabled()) {
+        return;
+    }
+
+    rootStore.syncFnOSGatewayIdentity().then(changed => {
+        if (changed) {
+            window.location.reload();
+        }
+    });
+}
 const settingsStore = useSettingsStore();
 const environmentsStore = useEnvironmentsStore();
 const userStore = useUserStore();
@@ -147,6 +160,8 @@ function onBackdropChanged(element: { push?: boolean, opened?: boolean }): void 
 
 onMounted(() => {
     setAppFontSize(settingsStore.appSettings.fontSize);
+
+    syncFnOSGatewayUser();
 
     f7ready((f7) => {
         environmentsStore.framework7DarkMode = f7.darkMode;

@@ -7,12 +7,12 @@ import (
 
 	"github.com/mayswind/ezbookkeeping/pkg/core"
 	"github.com/mayswind/ezbookkeeping/pkg/datastore"
-	"xorm.io/xorm"
 	"github.com/mayswind/ezbookkeeping/pkg/errs"
 	"github.com/mayswind/ezbookkeeping/pkg/log"
 	"github.com/mayswind/ezbookkeeping/pkg/models"
 	"github.com/mayswind/ezbookkeeping/pkg/utils"
 	"github.com/mayswind/ezbookkeeping/pkg/uuid"
+	"xorm.io/xorm"
 )
 
 const ledgerInviteCodeCharset = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
@@ -42,18 +42,40 @@ func (s *LedgerService) ListLedgers(c core.Context, uid int64) ([]*models.Ledger
 		return nil, errs.ErrUserIdInvalid
 	}
 
-	ledgers := make([]*models.LedgerInfo, 0)
-	ledgers = append(ledgers, &models.LedgerInfo{
+	personalInfo := &models.LedgerInfo{
 		LedgerId:    0,
 		Name:        "",
 		IsPersonal:  true,
 		Role:        models.LEDGER_MEMBER_ROLE_OWNER,
 		MemberCount: 1,
-	})
+		OwnerUid:    uid,
+	}
+
+	personalLedger, hasPersonalLedger, err := s.getPersonalLedger(c, uid)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if hasPersonalLedger {
+		memberCount, err := s.GetLedgerMemberCount(c, personalLedger.LedgerId)
+
+		if err != nil {
+			return nil, err
+		}
+
+		personalInfo.LedgerId = personalLedger.LedgerId
+		personalInfo.Name = personalLedger.Name
+		personalInfo.MemberCount = memberCount
+		personalInfo.InviteCode = personalLedger.InviteCode
+	}
+
+	ledgers := make([]*models.LedgerInfo, 0)
+	ledgers = append(ledgers, personalInfo)
 
 	sess := s.UserDB().NewSession(c)
 	members := make([]*models.LedgerMember, 0, 20)
-	err := sess.Where("uid=?", uid).Find(&members)
+	err = sess.Where("uid=?", uid).Find(&members)
 
 	if err != nil {
 		return nil, err
@@ -68,6 +90,10 @@ func (s *LedgerService) ListLedgers(c core.Context, uid int64) ([]*models.Ledger
 			}
 
 			return nil, err
+		}
+
+		if hasPersonalLedger && ledger.LedgerId == personalLedger.LedgerId {
+			continue
 		}
 
 		memberCount, err := s.GetLedgerMemberCount(c, ledger.LedgerId)
@@ -365,6 +391,35 @@ func (s *LedgerService) JoinLedger(c core.Context, uid int64, inviteCode string)
 
 // GetMembers returns all members of the given ledger
 func (s *LedgerService) GetMembers(c core.Context, uid int64, ledgerId int64) ([]*models.LedgerMemberInfo, error) {
+	if ledgerId <= 0 {
+		personalLedger, hasPersonalLedger, err := s.getPersonalLedger(c, uid)
+
+		if err != nil {
+			return nil, err
+		}
+
+		if !hasPersonalLedger {
+			user, err := Users.GetUserById(c, uid)
+
+			if err != nil {
+				return nil, err
+			}
+
+			return []*models.LedgerMemberInfo{
+				{
+					Uid:       user.Uid,
+					Username:  user.Username,
+					Nickname:  user.Nickname,
+					Role:      models.LEDGER_MEMBER_ROLE_OWNER,
+					JoinedAt:  user.CreatedUnixTime,
+					IsCurrent: true,
+				},
+			}, nil
+		}
+
+		ledgerId = personalLedger.LedgerId
+	}
+
 	if _, err := s.ResolveDataScope(c, uid, ledgerId); err != nil {
 		return nil, err
 	}
@@ -580,6 +635,177 @@ func (s *LedgerService) getUserNickname(c core.Context, uid int64) (string, erro
 	return user.Nickname, nil
 }
 
+// getPersonalLedger returns the persisted ledger row of the personal ledger, when it has been shared
+func (s *LedgerService) getPersonalLedger(c core.Context, uid int64) (*models.Ledger, bool, error) {
+	ledger := &models.Ledger{}
+	has, err := s.UserDB().NewSession(c).
+		Where("owner_uid=? AND data_uid=? AND deleted=?", uid, uid, false).
+		OrderBy("created_unix_time asc").
+		Get(ledger)
+
+	if err != nil {
+		return nil, false, err
+	}
+
+	return ledger, has, nil
+}
+
+// EnsurePersonalLedger makes the personal ledger shareable by creating a ledger row whose data owner is the user,
+// so that the user's existing transactions stay in place and other members can be added to them.
+func (s *LedgerService) EnsurePersonalLedger(c core.Context, uid int64) (*models.Ledger, error) {
+	if uid <= 0 {
+		return nil, errs.ErrUserIdInvalid
+	}
+
+	ledger, has, err := s.getPersonalLedger(c, uid)
+
+	if err != nil {
+		return nil, err
+	} else if has {
+		return ledger, nil
+	}
+
+	user, err := Users.GetUserById(c, uid)
+
+	if err != nil {
+		return nil, err
+	}
+
+	ledgerId := s.GenerateUuid(uuid.UUID_TYPE_DEFAULT)
+
+	if ledgerId <= 0 {
+		return nil, errs.ErrSystemIsBusy
+	}
+
+	inviteCode, err := s.generateInviteCode(c)
+
+	if err != nil {
+		return nil, err
+	}
+
+	ledger = &models.Ledger{
+		LedgerId:        ledgerId,
+		Name:            user.Nickname,
+		OwnerUid:        uid,
+		DataUid:         uid,
+		InviteCode:      inviteCode,
+		Deleted:         false,
+		CreatedUnixTime: time.Now().Unix(),
+		UpdatedUnixTime: time.Now().Unix(),
+	}
+
+	member := &models.LedgerMember{
+		LedgerId:        ledgerId,
+		Uid:             uid,
+		Role:            models.LEDGER_MEMBER_ROLE_OWNER,
+		CreatedUnixTime: time.Now().Unix(),
+		UpdatedUnixTime: time.Now().Unix(),
+	}
+
+	err = s.UserDB().DoTransaction(c, func(sess *xorm.Session) error {
+		if _, err := sess.Insert(ledger); err != nil {
+			return err
+		}
+
+		_, err := sess.Insert(member)
+		return err
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	log.Infof(c, "[ledgers.EnsurePersonalLedger] personal ledger of user \"uid:%d\" is now shareable (ledger id: %d)", uid, ledgerId)
+
+	return ledger, nil
+}
+
+// AddMember adds an existing user to the ledger directly by username, without an invite code.
+// Passing ledgerId 0 shares the caller's personal ledger.
+func (s *LedgerService) AddMember(c core.Context, uid int64, ledgerId int64, username string, role models.LedgerMemberRole) (*models.LedgerInfo, error) {
+	username = strings.TrimSpace(username)
+
+	if username == "" {
+		return nil, errs.ErrUsernameIsEmpty
+	}
+
+	if role != models.LEDGER_MEMBER_ROLE_EDITOR && role != models.LEDGER_MEMBER_ROLE_VIEWER {
+		role = models.LEDGER_MEMBER_ROLE_EDITOR
+	}
+
+	if ledgerId <= 0 {
+		ledger, err := s.EnsurePersonalLedger(c, uid)
+
+		if err != nil {
+			return nil, err
+		}
+
+		ledgerId = ledger.LedgerId
+	}
+
+	if err := s.requireLedgerOwner(c, uid, ledgerId); err != nil {
+		return nil, err
+	}
+
+	ledger, err := s.GetLedgerById(c, ledgerId)
+
+	if err != nil {
+		return nil, err
+	}
+
+	member, err := Users.GetUserByUsername(c, username)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if member.Uid == uid {
+		return nil, errs.ErrLedgerAlreadyJoined
+	}
+
+	existing := &models.LedgerMember{}
+	has, err := s.UserDB().NewSession(c).Where("ledger_id=? AND uid=?", ledgerId, member.Uid).Get(existing)
+
+	if err != nil {
+		return nil, err
+	} else if has {
+		return nil, errs.ErrLedgerAlreadyJoined
+	}
+
+	newMember := &models.LedgerMember{
+		LedgerId:        ledgerId,
+		Uid:             member.Uid,
+		Role:            role,
+		CreatedUnixTime: time.Now().Unix(),
+		UpdatedUnixTime: time.Now().Unix(),
+	}
+
+	if _, err = s.UserDB().NewSession(c).Insert(newMember); err != nil {
+		return nil, err
+	}
+
+	memberCount, err := s.GetLedgerMemberCount(c, ledgerId)
+
+	if err != nil {
+		return nil, err
+	}
+
+	ownerName, _ := s.getUserNickname(c, ledger.OwnerUid)
+
+	log.Infof(c, "[ledgers.AddMember] user \"uid:%d\" added user \"uid:%d\" to ledger \"%s\" (ledger id: %d)", uid, member.Uid, ledger.Name, ledgerId)
+
+	return &models.LedgerInfo{
+		LedgerId:    ledgerId,
+		Name:        ledger.Name,
+		IsPersonal:  ledger.DataUid == ledger.OwnerUid,
+		Role:        models.LEDGER_MEMBER_ROLE_OWNER,
+		MemberCount: memberCount,
+		InviteCode:  ledger.InviteCode,
+		OwnerUid:    ledger.OwnerUid,
+		OwnerName:   ownerName,
+	}, nil
+}
+
 // copyDefaultCategories copies all categories of the owner to the shadow data owner, so that the shared ledger
 // starts with the same category tree as the owner's personal ledger
 func (s *LedgerService) copyDefaultCategories(c core.Context, fromUid int64, toUid int64) error {
@@ -610,6 +836,7 @@ func (s *LedgerService) copyDefaultCategories(c core.Context, fromUid int64, toU
 		}
 
 		primary := &models.TransactionCategory{
+			Uid:          toUid,
 			Type:         category.Type,
 			Name:         category.Name,
 			DisplayOrder: category.DisplayOrder,
@@ -633,6 +860,7 @@ func (s *LedgerService) copyDefaultCategories(c core.Context, fromUid int64, toU
 
 		for i := 0; i < len(subs); i++ {
 			createMap[primary] = append(createMap[primary], &models.TransactionCategory{
+				Uid:          toUid,
 				Type:         subs[i].Type,
 				Name:         subs[i].Name,
 				DisplayOrder: subs[i].DisplayOrder,

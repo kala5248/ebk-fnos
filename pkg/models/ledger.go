@@ -61,6 +61,13 @@ type LedgerCreateRequest struct {
 	Name string `json:"name" binding:"required,notBlank,max=64"`
 }
 
+// LedgerAddMemberRequest represents all parameters of adding a member to a ledger by username
+type LedgerAddMemberRequest struct {
+	LedgerId int64            `json:"ledgerId,string" binding:"min=0"`
+	Username string           `json:"username" binding:"required,notBlank,max=32"`
+	Role     LedgerMemberRole `json:"role"`
+}
+
 // LedgerJoinRequest represents all parameters of joining a shared ledger request
 type LedgerJoinRequest struct {
 	InviteCode string `json:"inviteCode" binding:"required,notBlank,max=16"`

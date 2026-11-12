@@ -54,6 +54,7 @@ import type {
     LedgerInviteCodeRegenerateRequest,
     LedgerMemberRoleUpdateRequest,
     LedgerMemberRemoveRequest,
+    LedgerAddMemberRequest,
     LedgerDeleteRequest,
     LedgerLeaveRequest
 } from '@/models/ledger.ts';
@@ -1033,6 +1034,9 @@ export default {
                 ledgerId: ledgerId
             }
         } as ApiRequestConfig);
+    },
+    addLedgerMember: (req: LedgerAddMemberRequest): ApiResponsePromise<LedgerInfoResponse> => {
+        return axios.post<ApiResponse<LedgerInfoResponse>>('v1/ledgers/members/add.json', req);
     },
     updateLedgerMemberRole: (req: LedgerMemberRoleUpdateRequest): ApiResponsePromise<boolean> => {
         return axios.post<ApiResponse<boolean>>('v1/ledgers/members/role.json', req);

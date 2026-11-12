@@ -37,7 +37,7 @@
                                 <div class="d-flex align-center flex-wrap justify-end">
                                     <v-btn variant="text" color="default" size="small" :disabled="isCurrentLedger(ledger)"
                                            @click="switchLedger(ledger)">{{ tt('Use This Ledger') }}</v-btn>
-                                    <v-btn variant="text" color="default" size="small" v-if="!ledger.isPersonal"
+                                    <v-btn variant="text" color="default" size="small"
                                            @click="showMembers(ledger)">{{ tt('Members') }}</v-btn>
                                     <v-btn variant="text" color="default" size="small" v-if="!ledger.isPersonal"
                                            @click="showRenameDialogFor(ledger)">{{ tt('Rename') }}</v-btn>
@@ -113,6 +113,11 @@
     <v-dialog width="700" v-model="showMembersDialog">
         <v-card :title="tt('Ledger Members')">
             <v-card-text>
+                <div class="d-flex align-center gap-x-2 mb-3" v-if="currentLedger && currentLedger.role === LedgerMemberRole.Owner">
+                    <v-text-field density="compact" persistent-placeholder maxlength="32" hide-details
+                                  :label="tt('Username')" v-model.trim="newMemberUsername"/>
+                    <v-btn color="primary" :loading="submitting" @click="addMemberByUsername">{{ tt('Add') }}</v-btn>
+                </div>
                 <v-list lines="two" class="py-0">
                     <v-list-item v-for="member in members" :key="member.uid">
                         <template #title>
@@ -201,6 +206,7 @@ const showRemoveDialog = ref<boolean>(false);
 
 const newLedgerName = ref<string>('');
 const joinInviteCode = ref<string>('');
+const newMemberUsername = ref<string>('');
 const renameLedgerName = ref<string>('');
 const removeTarget = ref<LedgerInfoResponse | null>(null);
 
@@ -358,6 +364,50 @@ function showMembers(ledger: LedgerInfoResponse): void {
     showMembersDialog.value = true;
     members.value = [];
 
+    refreshMembers(ledger);
+}
+
+function addMemberByUsername(): void {
+    if (!currentLedger.value) {
+        return;
+    }
+
+    const username = newMemberUsername.value;
+
+    if (!username) {
+        snackbar.value?.showMessage(tt('The username cannot be empty'));
+        return;
+    }
+
+    submitting.value = true;
+
+    services.addLedgerMember({
+        ledgerId: currentLedger.value.id,
+        username: username,
+        role: LedgerMemberRole.Editor
+    }).then(response => {
+        submitting.value = false;
+        newMemberUsername.value = '';
+
+        const result = response.data ? response.data.result : null;
+
+        if (result) {
+            currentLedger.value = result;
+        }
+
+        snackbar.value?.showMessage(tt('The member has been added'));
+        loadLedgers();
+
+        if (currentLedger.value) {
+            refreshMembers(currentLedger.value);
+        }
+    }).catch(error => {
+        submitting.value = false;
+        snackbar.value?.showError(error);
+    });
+}
+
+function refreshMembers(ledger: LedgerInfoResponse): void {
     services.getLedgerMembers({ ledgerId: ledger.id }).then(response => {
         members.value = (response.data && response.data.result) ? response.data.result : [];
     }).catch(error => {

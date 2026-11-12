@@ -34,6 +34,7 @@ import { ThemeType } from '@/core/theme.ts';
 import { isProduction } from '@/lib/version.ts';
 import { initMapProvider } from '@/lib/map/index.ts';
 import { isUserLogined, isUserUnlocked } from '@/lib/userstate.ts';
+import { isFnOSGatewayAuthEnabled } from '@/lib/server_settings.ts';
 import { updateMapCacheExpiration } from '@/lib/cache.ts';
 import { getSystemTheme, setExpenseAndIncomeAmountColor } from '@/lib/ui/common.ts';
 
@@ -42,6 +43,18 @@ const { tt, getCurrentLanguageInfo, setLanguage, initLocale } = useI18n();
 const theme = useTheme();
 
 const rootStore = useRootStore();
+
+function syncFnOSGatewayUser(): void {
+    if (!isUserLogined() || !isFnOSGatewayAuthEnabled()) {
+        return;
+    }
+
+    rootStore.syncFnOSGatewayIdentity().then(changed => {
+        if (changed) {
+            window.location.reload();
+        }
+    });
+}
 const settingsStore = useSettingsStore();
 const userStore = useUserStore();
 const tokensStore = useTokensStore();
@@ -74,6 +87,8 @@ const showNotification = ref<boolean>(false);
 const currentNotificationContent = computed<string | null>(() => rootStore.currentNotification);
 
 onMounted(() => {
+    syncFnOSGatewayUser();
+
     document.addEventListener('DOMContentLoaded', () => {
         const languageInfo = getCurrentLanguageInfo();
         initMapProvider(languageInfo?.alternativeLanguageTag);

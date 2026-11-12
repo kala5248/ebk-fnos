@@ -19,7 +19,7 @@
                           @click="showLedgerActions(ledger)">
                 <template #footer>
                     <span v-if="isCurrentLedger(ledger)" class="text-color-primary">{{ tt('In Use') }}</span>
-                    <span v-else-if="!ledger.isPersonal && ledger.inviteCode">{{ tt('Invite Code') }}: {{ ledger.inviteCode }}</span>
+                    <span v-else-if="ledger.inviteCode">{{ tt('Invite Code') }}: {{ ledger.inviteCode }}</span>
                     <span v-else>{{ tt('Personal ledger, visible only to you') }}</span>
                 </template>
             </f7-list-item>
@@ -39,7 +39,7 @@
             <f7-actions-group v-if="actionLedger">
                 <f7-actions-label>{{ actionLedger.name }}</f7-actions-label>
                 <f7-actions-button @click="switchLedger(actionLedger)" v-if="!isCurrentLedger(actionLedger)">{{ tt('Use This Ledger') }}</f7-actions-button>
-                <f7-actions-button @click="showMembers(actionLedger)" v-if="!actionLedger.isPersonal">{{ tt('Members') }}</f7-actions-button>
+                <f7-actions-button @click="showMembers(actionLedger)">{{ tt('Members') }}</f7-actions-button>
                 <f7-actions-button @click="renameLedger(actionLedger)" v-if="!actionLedger.isPersonal">{{ tt('Rename') }}</f7-actions-button>
                 <f7-actions-button @click="regenerateInviteCode(actionLedger)" v-if="actionLedger.role === LedgerMemberRole.Owner && !actionLedger.isPersonal">{{ tt('Reset Invite Code') }}</f7-actions-button>
             </f7-actions-group>
@@ -64,6 +64,9 @@
                                    v-if="isOwner && member.role !== LedgerMemberRole.Owner && member.role !== LedgerMemberRole.Viewer">{{ tt('Set as Viewer (read only)') }}</f7-actions-button>
                 <f7-actions-button color="red" @click="removeMember(member)"
                                    v-if="isOwner && member.role !== LedgerMemberRole.Owner">{{ tt('Remove') }}</f7-actions-button>
+            </f7-actions-group>
+            <f7-actions-group v-if="isOwner">
+                <f7-actions-button @click="promptAddMember">{{ tt('Add Member by Username') }}</f7-actions-button>
             </f7-actions-group>
             <f7-actions-group>
                 <f7-actions-button bold close>{{ tt('Close') }}</f7-actions-button>
@@ -263,6 +266,46 @@ function showMembers(ledger: LedgerInfoResponse | null): void {
         showMembersActionSheet.value = true;
     }).catch(error => {
         showToast(error.message || error);
+    });
+}
+
+function promptAddMember(): void {
+    if (!membersLedger.value) {
+        return;
+    }
+
+    showMembersActionSheet.value = false;
+
+    showPrompt(tt('Enter the username to add'), '', (value: string) => {
+        const username = (value || '').trim();
+
+        if (!username) {
+            return;
+        }
+
+        services.addLedgerMember({
+            ledgerId: membersLedger.value ? membersLedger.value.id : '0',
+            username: username,
+            role: LedgerMemberRole.Editor
+        }).then(response => {
+            const result = response.data ? response.data.result : null;
+
+            if (result && membersLedger.value) {
+                membersLedger.value = result;
+            }
+
+            showToast(tt('The member has been added'));
+            loadLedgers();
+
+            if (membersLedger.value) {
+                services.getLedgerMembers({ ledgerId: membersLedger.value.id }).then(res => {
+                    members.value = (res.data && res.data.result) ? res.data.result : [];
+                    showMembersActionSheet.value = true;
+                });
+            }
+        }).catch(error => {
+            showToast(error.message || error);
+        });
     });
 }
 

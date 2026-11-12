@@ -41,6 +41,12 @@ export interface LedgerInviteCodeRegenerateRequest {
     readonly ledgerId: string;
 }
 
+export interface LedgerAddMemberRequest {
+    readonly ledgerId: string;
+    readonly username: string;
+    readonly role?: LedgerMemberRole;
+}
+
 export interface LedgerMemberRoleUpdateRequest {
     readonly ledgerId: string;
     readonly uid: string;

@@ -41,6 +41,7 @@ import {
 } from '@/lib/userstate.ts';
 import services, { type ApiResponsePromise } from '@/lib/services.ts';
 import { setCachedUserLlmConfig } from '@/lib/user_llm.ts';
+import { clearCurrentLedgerId } from '@/lib/ledger.ts';
 import logger from '@/lib/logger.ts';
 
 export const useRootStore = defineStore('root', () => {
@@ -727,6 +728,49 @@ export const useRootStore = defineStore('root', () => {
         });
     }
 
+    /**
+     * Re-checks the fnOS gateway identity on every app start.
+     * The NAS session can change user without clearing this app's token, so a stale local
+     * token would keep showing the previous user. Returns true when the identity changed.
+     */
+    function syncFnOSGatewayIdentity(): Promise<boolean> {
+        return new Promise((resolve) => {
+            services.loginByFnOSGateway().then(response => {
+                const data = response.data;
+
+                if (!data || !data.success || !data.result || !data.result.token) {
+                    resolve(false);
+                    return;
+                }
+
+                const currentUsername = userStore.currentUserBasicInfo ? userStore.currentUserBasicInfo.username : null;
+                const newUsername = data.result.user ? data.result.user.username : null;
+
+                if (!newUsername || (currentUsername && currentUsername === newUsername)) {
+                    resolve(false);
+                    return;
+                }
+
+                applyFnOSAuthResponse(data).then(() => {
+                    clearCurrentLedgerId();
+                    accountsStore.updateAccountListInvalidState(true);
+                    transactionCategoriesStore.updateTransactionCategoryListInvalidState(true);
+                    transactionTagsStore.updateTransactionTagListInvalidState(true);
+                    transactionsStore.updateTransactionListInvalidState(true);
+                    overviewStore.updateTransactionOverviewInvalidState(true);
+                    statisticsStore.updateTransactionStatisticsInvalidState(true);
+                    resolve(true);
+                }).catch(error => {
+                    logger.error('failed to switch fnos gateway user', error);
+                    resolve(false);
+                });
+            }).catch(error => {
+                logger.debug('fnos gateway identity is not available, keep current login state', error);
+                resolve(false);
+            });
+        });
+    }
+
     function authorizeByFnOS({ state, code }: { state: string, code: string }): Promise<AuthResponse> {
         return new Promise((resolve, reject) => {
             services.loginByFnOS({ state: state, code: code }).then(response => {
@@ -784,6 +828,7 @@ export const useRootStore = defineStore('root', () => {
         authorize2FA,
         authorizeByFnOS,
         authorizeByFnOSGateway,
+        syncFnOSGatewayIdentity,
         refreshUserLlmConfig,
         authorizeOAuth2,
         register,

@@ -79,36 +79,5 @@
                 "helpText": "以上连接信息仅在选择 MySQL / PostgreSQL 时生效；使用 SQLite 时可留空。"
             }
         ]
-    },
-    {
-        "stepTitle": "飞牛授权登录（可选）",
-        "items": [
-            {
-                "type": "tips",
-                "helpText": "启用后登录页会出现「使用飞牛账号登录」。需先在 fnOS 中注册一个 OAuth 客户端，并把客户端 ID（及密钥，如为机密客户端）填在下方；未填写客户端 ID 时本项自动关闭，不影响账号密码登录。"
-            },
-            {
-                "type": "switch",
-                "field": "wizard_enable_fnos_auth",
-                "label": "启用飞牛账号授权登录",
-                "initValue": "false"
-            },
-            {
-                "type": "text",
-                "field": "wizard_fnos_base_url",
-                "label": "飞牛系统地址",
-                "initValue": "http://127.0.0.1:5666"
-            },
-            {
-                "type": "text",
-                "field": "wizard_fnos_client_id",
-                "label": "OAuth 客户端 ID"
-            },
-            {
-                "type": "password",
-                "field": "wizard_fnos_client_secret",
-                "label": "OAuth 客户端密钥（公有客户端可留空）"
-            }
-        ]
     }
 ]

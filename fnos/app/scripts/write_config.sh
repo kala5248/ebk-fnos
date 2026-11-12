@@ -29,26 +29,9 @@ DB_NAME="${wizard_db_name:-ezbookkeeping}"
 DB_USER="${wizard_db_user:-ezbookkeeping}"
 DB_PASS="${wizard_db_passwd:-}"
 
-ENABLE_FNOS_RAW="${wizard_enable_fnos_auth:-}"
-FNOAUTH_BASE="${wizard_fnos_base_url:-}"
-[ -z "${FNOAUTH_BASE}" ] && FNOAUTH_BASE="$(old_value fnos_base_url)"
-[ -z "${FNOAUTH_BASE}" ] && FNOAUTH_BASE="http://127.0.0.1:5666"
-FNOAUTH_CLIENT_ID="${wizard_fnos_client_id:-}"
-[ -z "${FNOAUTH_CLIENT_ID}" ] && FNOAUTH_CLIENT_ID="$(old_value fnos_client_id)"
-FNOAUTH_CLIENT_SECRET="${wizard_fnos_client_secret:-}"
-[ -z "${FNOAUTH_CLIENT_SECRET}" ] && FNOAUTH_CLIENT_SECRET="$(old_value fnos_client_secret)"
-
-case "${ENABLE_FNOS_RAW}" in
-    1|true|True|TRUE|on|yes) ENABLE_FNOS="true" ;;
-    "" ) ENABLE_FNOS="$(old_value enable_fnos_auth)"; [ -z "${ENABLE_FNOS}" ] && ENABLE_FNOS="false" ;;
-    *) ENABLE_FNOS="false" ;;
-esac
-
-# Enabling fnOS auth without a client id makes the service refuse to start.
-if [ "${ENABLE_FNOS}" = "true" ] && [ -z "${FNOAUTH_CLIENT_ID}" ]; then
-    ENABLE_FNOS="false"
-    echo "未填写飞牛 OAuth 客户端 ID，已跳过启用飞牛账号登录。" >> "${TRIM_TEMP_LOGFILE}" 2>/dev/null || true
-fi
+# Login is handled by the fnOS unified gateway (X-Trim-* headers on app.sock),
+# so the OAuth flow is always disabled and no client credentials are needed.
+ENABLE_FNOS="false"
 
 if [ -f "${CONF_FILE}" ]; then
     OLD_SECRET="$(old_value secret_key)"
@@ -82,9 +65,6 @@ sed \
     -e "s|^enable_register = .*|enable_register = true|" \
     -e "s|^enable_fnos_auth = .*|enable_fnos_auth = ${ENABLE_FNOS}|" \
     -e "s|^enable_fnos_gateway_auth = .*|enable_fnos_gateway_auth = true|" \
-    -e "s|^fnos_base_url =.*|fnos_base_url = ${FNOAUTH_BASE}|" \
-    -e "s|^fnos_client_id =.*|fnos_client_id = ${FNOAUTH_CLIENT_ID}|" \
-    -e "s|^fnos_client_secret =.*|fnos_client_secret = ${FNOAUTH_CLIENT_SECRET}|" \
     "${TEMPLATE}" > "${CONF_FILE}"
 
 if [ ! -s "${CONF_FILE}" ]; then

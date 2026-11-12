@@ -151,6 +151,31 @@ func (a *LedgersApi) LedgerInviteCodeRegenerateHandler(c *core.WebContext) (any,
 	return inviteCode, nil
 }
 
+// LedgerAddMemberHandler adds an existing user to the ledger by username
+func (a *LedgersApi) LedgerAddMemberHandler(c *core.WebContext) (any, *errs.Error) {
+	var req models.LedgerAddMemberRequest
+	err := c.ShouldBindJSON(&req)
+
+	if err != nil {
+		log.Warnf(c, "[ledgers.LedgerAddMemberHandler] parse request failed, because %s", err.Error())
+		return nil, errs.NewIncompleteOrIncorrectSubmissionError(err)
+	}
+
+	uid := c.GetCurrentLoginUid()
+
+	info, err := a.ledgers.AddMember(c, uid, req.LedgerId, req.Username, req.Role)
+
+	if err != nil {
+		if !errs.IsCustomError(err) {
+			log.Errorf(c, "[ledgers.LedgerAddMemberHandler] failed to add member \"%s\" for user \"uid:%d\", because %s", req.Username, uid, err.Error())
+		}
+
+		return nil, errs.Or(err, errs.ErrOperationFailed)
+	}
+
+	return info, nil
+}
+
 // LedgerMemberListHandler returns all members of a shared ledger
 func (a *LedgersApi) LedgerMemberListHandler(c *core.WebContext) (any, *errs.Error) {
 	var req models.LedgerIdRequest

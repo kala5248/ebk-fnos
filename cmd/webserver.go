@@ -367,6 +367,7 @@ func startWebServer(c *core.CliContext) error {
 			apiV1Route.POST("/ledgers/rename.json", bindApi(api.Ledgers.LedgerRenameHandler, config))
 			apiV1Route.POST("/ledgers/invite/regenerate.json", bindApi(api.Ledgers.LedgerInviteCodeRegenerateHandler, config))
 			apiV1Route.GET("/ledgers/members.json", bindApi(api.Ledgers.LedgerMemberListHandler, config))
+			apiV1Route.POST("/ledgers/members/add.json", bindApi(api.Ledgers.LedgerAddMemberHandler, config))
 			apiV1Route.POST("/ledgers/members/role.json", bindApi(api.Ledgers.LedgerMemberRoleUpdateHandler, config))
 			apiV1Route.POST("/ledgers/members/remove.json", bindApi(api.Ledgers.LedgerMemberRemoveHandler, config))
 			apiV1Route.POST("/ledgers/leave.json", bindApi(api.Ledgers.LedgerLeaveHandler, config))
