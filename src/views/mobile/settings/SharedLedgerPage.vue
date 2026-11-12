@@ -121,7 +121,7 @@ function getMemberRoleName(role: LedgerMemberRole): string {
 }
 
 function isCurrentLedger(ledger: LedgerInfoResponse): boolean {
-    return getCurrentLedgerId() === parseInt(ledger.id, 10);
+    return getCurrentLedgerId() === ledger.id;
 }
 
 function loadLedgers(): void {
@@ -131,7 +131,7 @@ function loadLedgers(): void {
         const current = getCurrentLedgerId();
 
         if (current > 0 && !ledgers.value.some(item => parseInt(item.id, 10) === current)) {
-            setCurrentLedgerId(0);
+            setCurrentLedgerId('');
         }
     }).catch(error => {
         showToast(error.message || error);
@@ -148,7 +148,7 @@ function switchLedger(ledger: LedgerInfoResponse | null): void {
         return;
     }
 
-    setCurrentLedgerId(parseInt(ledger.id, 10));
+    setCurrentLedgerId(ledger.id);
     showLedgerActionSheet.value = false;
     window.location.reload();
 }
@@ -240,7 +240,7 @@ function removeLedger(ledger: LedgerInfoResponse | null): void {
 
         promise.then(() => {
             if (isCurrentLedger(ledger)) {
-                setCurrentLedgerId(0);
+                setCurrentLedgerId('');
             }
 
             showToast(tt('The operation succeeded'));

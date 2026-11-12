@@ -1,26 +1,29 @@
 const CURRENT_LEDGER_ID_KEY = 'ezbookkeeping.currentLedgerId';
 
-export function getCurrentLedgerId(): number {
+export function getCurrentLedgerId(): string {
     try {
         const value = localStorage.getItem(CURRENT_LEDGER_ID_KEY);
 
-        if (!value) {
-            return 0;
+        if (!value || value === '0' || !/^\d+$/.test(value)) {
+            return '';
         }
 
-        const ledgerId = parseInt(value, 10);
-        return isNaN(ledgerId) || ledgerId <= 0 ? 0 : ledgerId;
+        return value;
     } catch {
-        return 0;
+        return '';
     }
 }
 
-export function setCurrentLedgerId(ledgerId: number): void {
+// Ledger ids are 64-bit integers and exceed JavaScript's safe integer range,
+// so they must be kept and sent as strings to avoid precision loss.
+export function setCurrentLedgerId(ledgerId: string | number): void {
     try {
-        if (!ledgerId || ledgerId <= 0) {
+        const value = ledgerId ? ledgerId.toString() : '';
+
+        if (!value || value === '0' || !/^\d+$/.test(value)) {
             localStorage.removeItem(CURRENT_LEDGER_ID_KEY);
         } else {
-            localStorage.setItem(CURRENT_LEDGER_ID_KEY, ledgerId.toString());
+            localStorage.setItem(CURRENT_LEDGER_ID_KEY, value);
         }
     } catch {
         // ignore

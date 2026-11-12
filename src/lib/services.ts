@@ -279,8 +279,8 @@ axios.interceptors.request.use((config: ApiRequestConfig) => {
 
     const currentLedgerId = getCurrentLedgerId();
 
-    if (currentLedgerId > 0 && !config.noAuth) {
-        config.headers['X-Ledger-Id'] = currentLedgerId.toString();
+    if (currentLedgerId && currentLedgerId !== '0' && !config.noAuth) {
+        config.headers['X-Ledger-Id'] = currentLedgerId;
     }
 
     if (needBlockRequest && !config.ignoreBlocked) {

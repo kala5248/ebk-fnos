@@ -29,14 +29,14 @@ import { getCurrentLedgerId, setCurrentLedgerId } from '@/lib/ledger.ts';
 import { mdiAccountMultipleOutline } from '@mdi/js';
 
 interface LedgerSwitchItem {
-    readonly id: number;
+    readonly id: string;
     readonly displayName: string;
 }
 
 const { tt } = useI18n();
 
 const ledgers = ref<LedgerSwitchItem[]>([]);
-const currentLedgerId = ref<number>(getCurrentLedgerId());
+const currentLedgerId = ref<string>(getCurrentLedgerId());
 
 const selectableLedgers = computed<LedgerSwitchItem[]>(() => ledgers.value);
 
@@ -45,7 +45,7 @@ function loadLedgers(): void {
         const result = (response.data && response.data.result) ? response.data.result : [];
 
         ledgers.value = result.map(item => ({
-            id: parseInt(item.id, 10),
+            id: item.id,
             displayName: item.isPersonal ? `${item.name} (${tt('Personal')})` : item.name
         }));
 
@@ -53,15 +53,15 @@ function loadLedgers(): void {
         const exists = ledgers.value.some(item => item.id === current);
 
         if (!exists) {
-            currentLedgerId.value = 0;
-            setCurrentLedgerId(0);
+            currentLedgerId.value = '';
+            setCurrentLedgerId('');
         }
     }).catch(() => {
         ledgers.value = [];
     });
 }
 
-function switchLedger(ledgerId: number): void {
+function switchLedger(ledgerId: string): void {
     if (ledgerId === currentLedgerId.value) {
         return;
     }

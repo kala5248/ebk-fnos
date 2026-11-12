@@ -188,7 +188,7 @@ function loadLedgers(): void {
 }
 
 function isCurrentLedger(ledger: LedgerInfoResponse): boolean {
-    return getCurrentLedgerId() === parseInt(ledger.id, 10);
+    return getCurrentLedgerId() === ledger.id;
 }
 
 function switchLedger(ledger: LedgerInfoResponse): void {
@@ -196,7 +196,7 @@ function switchLedger(ledger: LedgerInfoResponse): void {
         return;
     }
 
-    setCurrentLedgerId(parseInt(ledger.id, 10));
+    setCurrentLedgerId(ledger.id);
     window.location.reload();
 }
 
