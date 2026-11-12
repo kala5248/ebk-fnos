@@ -114,7 +114,7 @@ const { showConfirm, showToast } = useI18nUIComponents();
 
 const allProviders = ALL_LLM_PROVIDERS;
 
-const selectedProvider = ref<LlmProviderOption | null>(ALL_LLM_PROVIDERS[0]);
+const selectedProvider = ref<LlmProviderOption | null>(ALL_LLM_PROVIDERS.length > 0 ? ALL_LLM_PROVIDERS[0]! : null);
 const baseUrl = ref<string>('');
 const apiKey = ref<string>('');
 const textModelId = ref<string>('');
@@ -145,7 +145,7 @@ function loadConfig(): void {
             return;
         }
 
-        selectedProvider.value = ALL_LLM_PROVIDERS.find(item => item.value === result.provider) || ALL_LLM_PROVIDERS[0];
+        selectedProvider.value = ALL_LLM_PROVIDERS.find(item => item.value === result.provider) ?? null;
         baseUrl.value = result.baseUrl || '';
         textModelId.value = result.textModelId || '';
         imageModelId.value = result.imageModelId || '';
