@@ -114,6 +114,7 @@ enable_user_llm_config = true
 
 1. **服务设置**：服务端口，默认 `8080`，可改（改完会自动同步桌面入口端口）。
 2. **数据库设置**：内置 SQLite（默认）/ MySQL / PostgreSQL，选择外部数据库时填写 host:port、库名、用户名、密码。
+3. **飞牛授权登录（可选）**：开启后登录页出现「使用飞牛账号登录」，需填写 fnOS 地址（默认 `http://127.0.0.1:5666`）与在 fnOS 注册的 OAuth 客户端 ID / 密钥；未填客户端 ID 时自动关闭，不影响账号密码登录。
 
 安装后由 `cmd/install_callback` 生成 `$TRIM_PKGETC/ezbookkeeping.ini`：SQLite 数据库落在 `$TRIM_PKGVAR/data/`，附件落在 `$TRIM_PKGVAR/files/`，日志落在 `$TRIM_PKGVAR/log/`，`secret_key` 首次安装随机生成。安装完成后可在应用中心「设置」中通过配置向导（`fnos/wizard/config`）改端口或数据库，应用会自动重启。
 
