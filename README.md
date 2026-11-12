@@ -92,6 +92,31 @@ enable_user_llm_config = true
 
 > 注意：二进制需在源码根目录（或包含 `templates/prompt/*.tmpl` 的发行包目录）下启动，否则 AI 识别会因找不到提示词模板而失败。
 
+### 打包成飞牛应用（.fpk）
+
+一条命令完成「编译后端 + 构建前端 + 组装 fpk 目录 + 打包」：
+
+```bash
+./build-fnos-fpk.sh
+# 产物：build/ebk-fnos-2.1.1-fnos-x86.fpk
+```
+
+可选参数：
+
+| 参数 | 说明 |
+|---|---|
+| `--skip-frontend` | 复用已有 `dist/`，CI 或二次构建时加快速度 |
+| `--no-pack` | 只组装 `build/fnos/` 目录，不生成 `.fpk` |
+
+打包依赖 Go、GCC、Node.js/npm；若安装了官方 `fnpack` 工具则用它产出标准 `.fpk`，否则回退为 `tar.gz` 兼容格式（文件名仍为 `.fpk`）。前端构建建议至少 8 GB 内存。
+
+**安装向导**（`fnos/wizard/install`）在飞牛应用中心手动安装时弹出两步：
+
+1. **服务设置**：服务端口，默认 `8080`，可改（改完会自动同步桌面入口端口）。
+2. **数据库设置**：内置 SQLite（默认）/ MySQL / PostgreSQL，选择外部数据库时填写 host:port、库名、用户名、密码。
+
+安装后由 `cmd/install_callback` 生成 `$TRIM_PKGETC/ezbookkeeping.ini`：SQLite 数据库落在 `$TRIM_PKGVAR/data/`，附件落在 `$TRIM_PKGVAR/files/`，日志落在 `$TRIM_PKGVAR/log/`，`secret_key` 首次安装随机生成。安装完成后可在应用中心「设置」中通过配置向导（`fnos/wizard/config`）改端口或数据库，应用会自动重启。
+
 ## 新增接口一览
 
 | 接口 | 说明 |

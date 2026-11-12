@@ -1,0 +1,37 @@
+name: Build fnOS fpk
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*-fnos'
+
+jobs:
+  build-fpk:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build fpk
+        run: ./build-fnos-fpk.sh
+
+      - name: Upload fpk artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ebk-fnos-fpk
+          path: build/*.fpk
+          if-no-files-found: error

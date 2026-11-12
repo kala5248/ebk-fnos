@@ -1,0 +1,13 @@
+{
+    ".url": {
+        "ebk-fnos.main": {
+            "title": "ezBookkeeping",
+            "icon": "images/icon-{0}.png",
+            "type": "url",
+            "protocol": "http",
+            "port": "8080",
+            "url": "/",
+            "allUsers": true
+        }
+    }
+}

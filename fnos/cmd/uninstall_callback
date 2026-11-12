@@ -1,0 +1,4 @@
+#!/bin/bash
+set -u
+# Keep TRIM_PKGVAR (database / attachments) so reinstalling can reuse user data.
+exit 0

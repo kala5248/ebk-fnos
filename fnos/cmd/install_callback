@@ -1,0 +1,5 @@
+#!/bin/bash
+set -u
+chmod +x "${TRIM_APPDEST}/ezbookkeeping" "${TRIM_APPDEST}/scripts/write_config.sh" 2>/dev/null
+"${TRIM_APPDEST}/scripts/write_config.sh" || exit 1
+exit 0

@@ -1,0 +1,85 @@
+#!/bin/bash
+set -u
+
+CONF="${TRIM_PKGETC}/ezbookkeeping.ini"
+PID_FILE="${TRIM_PKGVAR}/app.pid"
+APP_LOG="${TRIM_PKGVAR}/app.log"
+BIN="${TRIM_APPDEST}/ezbookkeeping"
+
+read_port() {
+    grep -E '^http_port = ' "${CONF}" 2>/dev/null | head -n 1 | cut -d '=' -f 2 | tr -d ' '
+}
+
+is_running() {
+    if [ -f "${PID_FILE}" ]; then
+        pid="$(tr -d '[:space:]' < "${PID_FILE}")"
+        if [ -n "${pid}" ] && kill -0 "${pid}" 2>/dev/null; then
+            return 0
+        fi
+        rm -f "${PID_FILE}"
+    fi
+    return 1
+}
+
+do_start() {
+    if [ ! -x "${BIN}" ]; then
+        echo "应用可执行文件不存在：${BIN}" > "${TRIM_TEMP_LOGFILE}"
+        exit 1
+    fi
+    if [ ! -f "${CONF}" ]; then
+        echo "配置文件不存在：${CONF}" > "${TRIM_TEMP_LOGFILE}"
+        exit 1
+    fi
+    if is_running; then
+        exit 0
+    fi
+    mkdir -p "${TRIM_PKGVAR}"
+    cd "${TRIM_APPDEST}" || exit 1
+    nohup "${BIN}" server run --conf-path "${CONF}" >> "${APP_LOG}" 2>&1 &
+    echo $! > "${PID_FILE}"
+    sleep 2
+    if kill -0 "$(cat "${PID_FILE}")" 2>/dev/null; then
+        exit 0
+    fi
+    echo "应用启动失败，请查看日志：${APP_LOG}" > "${TRIM_TEMP_LOGFILE}"
+    exit 1
+}
+
+do_stop() {
+    if is_running; then
+        pid="$(cat "${PID_FILE}")"
+        kill "${pid}" 2>/dev/null
+        for _ in 1 2 3 4 5 6 7 8 9 10; do
+            kill -0 "${pid}" 2>/dev/null || break
+            sleep 1
+        done
+        kill -9 "${pid}" 2>/dev/null
+        rm -f "${PID_FILE}"
+    fi
+    exit 0
+}
+
+case "$1" in
+    start)
+        do_start
+        ;;
+    stop)
+        do_stop
+        ;;
+    status)
+        if is_running; then
+            port="$(read_port)"
+            if command -v curl >/dev/null 2>&1 && [ -n "${port}" ]; then
+                if curl -fsS --max-time 3 "http://127.0.0.1:${port}/server_settings.js" >/dev/null 2>&1; then
+                    exit 0
+                fi
+                exit 3
+            fi
+            exit 0
+        fi
+        exit 3
+        ;;
+    *)
+        exit 1
+        ;;
+esac

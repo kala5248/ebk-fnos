@@ -1,0 +1,4 @@
+#!/bin/bash
+set -u
+mkdir -p "${TRIM_PKGVAR}/data" "${TRIM_PKGVAR}/files" "${TRIM_PKGVAR}/log" "${TRIM_PKGETC}"
+exit 0
