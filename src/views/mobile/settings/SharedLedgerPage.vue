@@ -130,7 +130,7 @@ function loadLedgers(): void {
 
         const current = getCurrentLedgerId();
 
-        if (current > 0 && !ledgers.value.some(item => parseInt(item.id, 10) === current)) {
+        if (current && !ledgers.value.some(item => item.id === current)) {
             setCurrentLedgerId('');
         }
     }).catch(error => {
