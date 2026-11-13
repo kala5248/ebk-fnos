@@ -32,7 +32,8 @@ export interface LlmProviderOption {
 }
 
 export const ALL_LLM_PROVIDERS: LlmProviderOption[] = [
-    { value: 'openai', name: 'OpenAI', defaultBaseUrl: 'https://api.openai.com/v1', supportImage: true },
+    { value: 'openai', name: 'OpenAI (Official)', defaultBaseUrl: 'https://api.openai.com/v1', supportImage: true },
+    { value: 'openai_compatible', name: 'Other (OpenAI Compatible)', defaultBaseUrl: '', supportImage: true },
     { value: 'anthropic', name: 'Anthropic', defaultBaseUrl: 'https://api.anthropic.com', supportImage: true },
     { value: 'googleai', name: 'Google AI', defaultBaseUrl: 'https://generativelanguage.googleapis.com', supportImage: true },
     { value: 'ollama', name: 'Ollama', defaultBaseUrl: 'http://127.0.0.1:11434', supportImage: false },
