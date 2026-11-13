@@ -49,7 +49,27 @@
             </f7-list>
         </f7-popover>
 
-        <a-i-text-recognition-sheet v-model:show="showAiTextSheet" @text:confirm="recognizeAiTextFromList" />
+        <f7-sheet class="ai-accounting-sheet" swipe-to-close swipe-handler=".swipe-handler" style="height:auto"
+                  :opened="showAiTextSheet" @sheet:closed="showAiTextSheet = false">
+            <f7-toolbar class="toolbar-with-swipe-handler">
+                <div class="swipe-handler"></div>
+                <div class="left">
+                    <f7-link icon-f7="xmark" :aria-label="tt('Cancel')" @click="showAiTextSheet = false"></f7-link>
+                </div>
+                <div class="right">
+                    <f7-button round fill icon-f7="checkmark_alt" :class="{ 'disabled': !aiText.trim() }"
+                               :aria-label="tt('Confirm')" @click="recognizeAiTextFromList(aiText)"></f7-button>
+                </div>
+            </f7-toolbar>
+            <f7-page-content class="margin-top">
+                <div class="padding-horizontal padding-bottom">
+                    <p class="text-color-gray">{{ tt('Enter one sentence and AI will recognize it, then you can confirm the transaction in the form below.') }}</p>
+                    <textarea class="ai-accounting-textarea" v-model="aiText"
+                              :placeholder="tt('For example: lunch yesterday cost 35 yuan')"></textarea>
+                    <p class="text-align-center"><small>{{ tt('Uploaded text and personal data will be sent to the large language model, please be aware of potential privacy risks.') }}</small></p>
+                </div>
+            </f7-page-content>
+        </f7-sheet>
 
         <f7-toolbar tabbar bottom class="compact-tabbar toolbar-item-auto-size transaction-list-toolbar">
             <f7-link :class="{ 'disabled': loading || query.dateType === DateRange.All.type }" :aria-label="tt('Previous Period')" @click="shiftDateRange(query.minTime, query.maxTime, -1)">
@@ -656,7 +676,6 @@ import type { Router } from 'framework7/types';
 
 import { useI18n } from '@/locales/helpers.ts';
 import { scrollToSelectedItem } from '@/lib/ui/common.ts';
-import AITextRecognitionSheet from '@/components/mobile/AITextRecognitionSheet.vue';
 import { isTransactionFromAITextRecognitionEnabled } from '@/lib/server_settings.ts';
 import { getCurrentLedgerId } from '@/lib/ledger.ts';
 import {
@@ -1447,15 +1466,16 @@ function changeAmountFilter(filterType: string): void {
 }
 
 const showAiTextSheet = ref<boolean>(false);
+const aiText = ref<string>('');
 
 function recognizeAiTextFromList(text: string): void {
-    showAiTextSheet.value = false;
-
     if (!text || !text.trim()) {
         return;
     }
 
+    showAiTextSheet.value = false;
     props.f7router.navigate(`/transaction/add?aiText=${encodeURIComponent(text.trim())}`);
+    aiText.value = '';
 }
 
 function add(): void {
@@ -1598,6 +1618,18 @@ init();
 </script>
 
 <style>
+.ai-accounting-textarea {
+    width: 100%;
+    min-height: 110px;
+    padding: 12px;
+    border: 1px solid rgba(128, 128, 128, 0.3);
+    border-radius: 8px;
+    background: var(--f7-page-bg-color);
+    color: var(--f7-text-color);
+    font-size: 15px;
+    resize: none;
+}
+
 .transaction-list-toolbar .toolbar-inner {
     padding-inline-end: 8px;
 }
