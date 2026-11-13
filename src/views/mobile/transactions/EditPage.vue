@@ -1068,10 +1068,12 @@ function init(): void {
 
         loading.value = false;
 
-        if (isDefined(props.autoRecognizeClipboardText)) {
-            pastedText.value = props.autoRecognizeClipboardText;
+        const autoText = isDefined(props.autoRecognizeClipboardText) ? props.autoRecognizeClipboardText : (typeof query['aiText'] === 'string' ? query['aiText'] : undefined);
 
-            if (pastedText.value && !settingsStore.appSettings.alwaysRequireConfirmationOfClipboardContentBeforeSubmission) {
+        if (isDefined(autoText)) {
+            pastedText.value = autoText;
+
+            if (pastedText.value) {
                 recognizeText(pastedText.value);
             } else {
                 showAITextRecognitionSheet.value = true;

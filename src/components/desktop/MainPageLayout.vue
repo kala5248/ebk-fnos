@@ -97,6 +97,15 @@
                                         <v-tooltip activator="parent">{{ tt('Add Transaction') }}</v-tooltip>
                                     </v-btn>
                                 </router-link>
+                                <router-link class="d-inline-flex align-center" to="/transaction/list?pageType=0&dateType=7"
+                                             v-if="showAddTransactionButtonInDesktopNavbar && isTransactionFromAITextRecognitionEnabled()">
+                                    <v-btn class="add-transaction-button ms-1" color="primary" density="comfortable" variant="tonal"
+                                           :aria-label="tt('AI Accounting')" :icon="true"
+                                           @click="showAiDialogInTransactionListPage">
+                                        <v-icon :icon="mdiMagicStaff" size="22" />
+                                        <v-tooltip activator="parent">{{ tt('AI Accounting') }}</v-tooltip>
+                                    </v-btn>
+                                </router-link>
                             </slot>
                         </div>
                         <ledger-switcher class="me-3 d-none d-md-flex" />
@@ -201,6 +210,7 @@ import { APPLICATION_LOGO_PATH } from '@/consts/asset.ts';
 import { ThemeType } from '@/core/theme.ts';
 
 import { getSystemTheme, setExpenseAndIncomeAmountColor } from '@/lib/ui/common.ts';
+import { isTransactionFromAITextRecognitionEnabled } from '@/lib/server_settings.ts';
 
 import {
     mdiMenu,
@@ -215,6 +225,7 @@ import {
     mdiCompass,
     mdiCompassOutline,
     mdiPlus,
+    mdiMagicStaff,
     mdiCellphone,
     mdiThemeLightDark,
     mdiWeatherSunny,
@@ -316,6 +327,10 @@ function logout(): void {
 
 function showAddDialogInTransactionListPage(): void {
     desktopPageStore.setShowAddTransactionDialogInTransactionList();
+}
+
+function showAiDialogInTransactionListPage(): void {
+    desktopPageStore.setShowAiTransactionDialogInTransactionList();
 }
 </script>
 

@@ -17,6 +17,7 @@
             </f7-nav-title>
             <f7-nav-right :class="{ 'navbar-compact-icons': true, 'disabled': loading }">
                 <f7-link icon-f7="search" :aria-label="tt('Search')" @click="toggleSearchbar"></f7-link>
+                <f7-link icon-f7="wand_stars" :class="{ 'disabled': !canAddTransaction }" :aria-label="tt('AI Accounting')" v-if="isTransactionFromAITextRecognitionEnabled()" @click="showAiTextSheet = true"></f7-link>
                 <f7-link icon-f7="plus" :class="{ 'disabled': !canAddTransaction }" :aria-label="tt('Add')" @click="add"></f7-link>
             </f7-nav-right>
 
@@ -47,6 +48,8 @@
                 </f7-list-item>
             </f7-list>
         </f7-popover>
+
+        <a-i-text-recognition-sheet v-model:show="showAiTextSheet" @text:confirm="recognizeAiTextFromList" />
 
         <f7-toolbar tabbar bottom class="compact-tabbar toolbar-item-auto-size transaction-list-toolbar">
             <f7-link :class="{ 'disabled': loading || query.dateType === DateRange.All.type }" :aria-label="tt('Previous Period')" @click="shiftDateRange(query.minTime, query.maxTime, -1)">
@@ -653,6 +656,8 @@ import type { Router } from 'framework7/types';
 
 import { useI18n } from '@/locales/helpers.ts';
 import { scrollToSelectedItem } from '@/lib/ui/common.ts';
+import AITextRecognitionSheet from '@/components/mobile/AITextRecognitionSheet.vue';
+import { isTransactionFromAITextRecognitionEnabled } from '@/lib/server_settings.ts';
 import { getCurrentLedgerId } from '@/lib/ledger.ts';
 import {
     type Framework7Dom,
@@ -1439,6 +1444,18 @@ function changeAmountFilter(filterType: string): void {
     if (changed) {
         reload();
     }
+}
+
+const showAiTextSheet = ref<boolean>(false);
+
+function recognizeAiTextFromList(text: string): void {
+    showAiTextSheet.value = false;
+
+    if (!text || !text.trim()) {
+        return;
+    }
+
+    props.f7router.navigate(`/transaction/add?aiText=${encodeURIComponent(text.trim())}`);
 }
 
 function add(): void {

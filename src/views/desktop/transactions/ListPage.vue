@@ -1281,6 +1281,11 @@ function reload(force: boolean, init: boolean): void {
                 desktopPageStore.resetShowAddTransactionDialogInTransactionList();
                 add();
             }
+
+            if (desktopPageStore.showAiTransactionDialogInTransactionList) {
+                desktopPageStore.resetShowAiTransactionDialogInTransactionList();
+                openAiTextRecognitionDialog();
+            }
         }
 
         if (queryMonthlyData.value) {
@@ -1881,6 +1886,13 @@ watch(() => desktopPageStore.showAddTransactionDialogInTransactionList, (newValu
     if (newValue) {
         desktopPageStore.resetShowAddTransactionDialogInTransactionList();
         add();
+    }
+});
+
+watch(() => desktopPageStore.showAiTransactionDialogInTransactionList, (newValue) => {
+    if (newValue) {
+        desktopPageStore.resetShowAiTransactionDialogInTransactionList();
+        openAiTextRecognitionDialog();
     }
 });
 
