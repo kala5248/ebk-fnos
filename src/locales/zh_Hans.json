@@ -3073,5 +3073,15 @@
     "For example: Lunch yesterday cost 35 yuan": "例如：昨天中午吃饭花了35元",
     "Recognize and Review": "识别并进入表单",
     "Recognize and Save": "识别并直接保存",
-    "Enter one sentence and AI will recognize it.": "输入一句话，AI 将自动识别。"
+    "Enter one sentence and AI will recognize it.": "输入一句话，AI 将自动识别。",
+    "Add Member by Username": "按用户名添加成员",
+    "Enter the username to add": "输入要添加的用户名",
+    "The member has been added": "成员已添加",
+    "The username cannot be empty": "用户名不能为空",
+    "OpenAI (Official)": "OpenAI（官方）",
+    "Other (OpenAI Compatible)": "其他（OpenAI 兼容）",
+    "Anthropic": "Anthropic",
+    "Google AI": "Google AI",
+    "Ollama": "Ollama",
+    "LM Studio": "LM Studio"
 }

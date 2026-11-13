@@ -246,6 +246,7 @@ import logger from './logger.ts';
 interface ApiRequestConfig extends AxiosRequestConfig {
     readonly headers: AxiosRequestHeaders;
     readonly noAuth?: boolean;
+    readonly skipLedgerScope?: boolean;
     readonly ignoreBlocked?: boolean;
     readonly ignoreError?: boolean;
     readonly timeout?: number;
@@ -279,7 +280,7 @@ axios.interceptors.request.use((config: ApiRequestConfig) => {
 
     const currentLedgerId = getCurrentLedgerId();
 
-    if (currentLedgerId && currentLedgerId !== '0' && !config.noAuth) {
+    if (currentLedgerId && currentLedgerId !== '0' && !config.noAuth && !config.skipLedgerScope) {
         config.headers['X-Ledger-Id'] = currentLedgerId;
     }
 
@@ -441,7 +442,9 @@ export default {
         return axios.post<ApiResponse<boolean>>('v1/users/external_auth/unlink.json', req);
     },
     getTokens: (): ApiResponsePromise<TokenInfoResponse[]> => {
-        return axios.get<ApiResponse<TokenInfoResponse[]>>('v1/tokens/list.json');
+        return axios.get<ApiResponse<TokenInfoResponse[]>>('v1/tokens/list.json', {
+            skipLedgerScope: true
+        } as ApiRequestConfig);
     },
     generateAPIToken: (req: TokenGenerateAPIRequest): ApiResponsePromise<TokenGenerateAPIResponse> => {
         return axios.post<ApiResponse<TokenGenerateAPIResponse>>('v1/tokens/generate/api.json', req);
@@ -459,7 +462,9 @@ export default {
         } as ApiRequestConfig);
     },
     revokeAllTokens: (): ApiResponsePromise<boolean> => {
-        return axios.post<ApiResponse<boolean>>('v1/tokens/revoke_all.json');
+        return axios.post<ApiResponse<boolean>>('v1/tokens/revoke_all.json', {}, {
+            skipLedgerScope: true
+        } as ApiRequestConfig);
     },
     getProfile: (): ApiResponsePromise<UserProfileResponse> => {
         return axios.get<ApiResponse<UserProfileResponse>>('v1/users/profile/get.json');
@@ -1028,56 +1033,83 @@ export default {
         return url;
     },
     getLedgers: (): ApiResponsePromise<LedgerInfoResponse[]> => {
-        return axios.get<ApiResponse<LedgerInfoResponse[]>>('v1/ledgers/list.json');
+        return axios.get<ApiResponse<LedgerInfoResponse[]>>('v1/ledgers/list.json', {
+            skipLedgerScope: true
+        } as ApiRequestConfig);
     },
     createLedger: (req: LedgerCreateRequest): ApiResponsePromise<LedgerInfoResponse> => {
-        return axios.post<ApiResponse<LedgerInfoResponse>>('v1/ledgers/create.json', req);
+        return axios.post<ApiResponse<LedgerInfoResponse>>('v1/ledgers/create.json', req, {
+            skipLedgerScope: true
+        } as ApiRequestConfig);
     },
     joinLedger: (req: LedgerJoinRequest): ApiResponsePromise<LedgerInfoResponse> => {
-        return axios.post<ApiResponse<LedgerInfoResponse>>('v1/ledgers/join.json', req);
+        return axios.post<ApiResponse<LedgerInfoResponse>>('v1/ledgers/join.json', req, {
+            skipLedgerScope: true
+        } as ApiRequestConfig);
     },
     renameLedger: (req: LedgerRenameRequest): ApiResponsePromise<boolean> => {
-        return axios.post<ApiResponse<boolean>>('v1/ledgers/rename.json', req);
+        return axios.post<ApiResponse<boolean>>('v1/ledgers/rename.json', req, {
+            skipLedgerScope: true
+        } as ApiRequestConfig);
     },
     regenerateLedgerInviteCode: (req: LedgerInviteCodeRegenerateRequest): ApiResponsePromise<string> => {
-        return axios.post<ApiResponse<string>>('v1/ledgers/invite/regenerate.json', req);
+        return axios.post<ApiResponse<string>>('v1/ledgers/invite/regenerate.json', req, {
+            skipLedgerScope: true
+        } as ApiRequestConfig);
     },
     getLedgerMembers: ({ ledgerId }: { ledgerId: string }): ApiResponsePromise<LedgerMemberInfoResponse[]> => {
         return axios.get<ApiResponse<LedgerMemberInfoResponse[]>>('v1/ledgers/members.json', {
             params: {
                 ledgerId: ledgerId
-            }
+            },
+            skipLedgerScope: true
         } as ApiRequestConfig);
     },
     addLedgerMember: (req: LedgerAddMemberRequest): ApiResponsePromise<LedgerInfoResponse> => {
-        return axios.post<ApiResponse<LedgerInfoResponse>>('v1/ledgers/members/add.json', req);
+        return axios.post<ApiResponse<LedgerInfoResponse>>('v1/ledgers/members/add.json', req, {
+            skipLedgerScope: true
+        } as ApiRequestConfig);
     },
     updateLedgerMemberRole: (req: LedgerMemberRoleUpdateRequest): ApiResponsePromise<boolean> => {
-        return axios.post<ApiResponse<boolean>>('v1/ledgers/members/role.json', req);
+        return axios.post<ApiResponse<boolean>>('v1/ledgers/members/role.json', req, {
+            skipLedgerScope: true
+        } as ApiRequestConfig);
     },
     removeLedgerMember: (req: LedgerMemberRemoveRequest): ApiResponsePromise<boolean> => {
-        return axios.post<ApiResponse<boolean>>('v1/ledgers/members/remove.json', req);
+        return axios.post<ApiResponse<boolean>>('v1/ledgers/members/remove.json', req, {
+            skipLedgerScope: true
+        } as ApiRequestConfig);
     },
     leaveLedger: (req: LedgerLeaveRequest): ApiResponsePromise<boolean> => {
-        return axios.post<ApiResponse<boolean>>('v1/ledgers/leave.json', req);
+        return axios.post<ApiResponse<boolean>>('v1/ledgers/leave.json', req, {
+            skipLedgerScope: true
+        } as ApiRequestConfig);
     },
     deleteLedger: (req: LedgerDeleteRequest): ApiResponsePromise<boolean> => {
-        return axios.post<ApiResponse<boolean>>('v1/ledgers/delete.json', req);
+        return axios.post<ApiResponse<boolean>>('v1/ledgers/delete.json', req, {
+            skipLedgerScope: true
+        } as ApiRequestConfig);
     },
     getUserLlmConfig: (): ApiResponsePromise<UserLlmConfigResponse | false> => {
-        return axios.get<ApiResponse<UserLlmConfigResponse | false>>('v1/llm/user_config/get.json');
+        return axios.get<ApiResponse<UserLlmConfigResponse | false>>('v1/llm/user_config/get.json', {
+            skipLedgerScope: true
+        } as ApiRequestConfig);
     },
     saveUserLlmConfig: (req: UserLlmConfigUpdateRequest): ApiResponsePromise<UserLlmConfigResponse> => {
         return axios.post<ApiResponse<UserLlmConfigResponse>>('v1/llm/user_config/save.json', req, {
-            timeout: DEFAULT_LLM_API_TIMEOUT
+            timeout: DEFAULT_LLM_API_TIMEOUT,
+            skipLedgerScope: true
         } as ApiRequestConfig);
     },
     deleteUserLlmConfig: (): ApiResponsePromise<boolean> => {
-        return axios.post<ApiResponse<boolean>>('v1/llm/user_config/delete.json', {});
+        return axios.post<ApiResponse<boolean>>('v1/llm/user_config/delete.json', {}, {
+            skipLedgerScope: true
+        } as ApiRequestConfig);
     },
     testUserLlmConfig: (): ApiResponsePromise<UserLlmConfigTestResponse> => {
         return axios.post<ApiResponse<UserLlmConfigTestResponse>>('v1/llm/user_config/test.json', {}, {
-            timeout: DEFAULT_LLM_API_TIMEOUT
+            timeout: DEFAULT_LLM_API_TIMEOUT,
+            skipLedgerScope: true
         } as ApiRequestConfig);
     },
     getFnOSAuthUrl: (): ApiResponsePromise<FnOSAuthUrlResponse> => {

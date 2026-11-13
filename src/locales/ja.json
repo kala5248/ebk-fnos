@@ -2992,5 +2992,9 @@
     "Parameter Invalid": "パラメーターが無効です",
     "Numeric Overflow": "数値オーバーフロー",
     "Invalid date range": "Invalid date range",
-    "Click to close": "クリックして閉じる"
+    "Click to close": "クリックして閉じる",
+    "Add Member by Username": "ユーザー名でメンバーを追加",
+    "Enter the username to add": "追加するユーザー名を入力してください",
+    "The member has been added": "メンバーを追加しました",
+    "The username cannot be empty": "ユーザー名は空にできません"
 }

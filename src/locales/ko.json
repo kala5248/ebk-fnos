@@ -2992,5 +2992,9 @@
     "Parameter Invalid": "잘못된 매개변수",
     "Numeric Overflow": "숫자 오버플로우",
     "Invalid date range": "Invalid date range",
-    "Click to close": "닫으려면 클릭하세요"
+    "Click to close": "닫으려면 클릭하세요",
+    "Add Member by Username": "사용자 이름으로 구성원 추가",
+    "Enter the username to add": "추가할 사용자 이름을 입력하세요",
+    "The member has been added": "구성원이 추가되었습니다",
+    "The username cannot be empty": "사용자 이름은 비워 둘 수 없습니다"
 }

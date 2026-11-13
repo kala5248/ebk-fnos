@@ -2992,5 +2992,9 @@
     "Parameter Invalid": "Parametro non valido",
     "Numeric Overflow": "Overflow numerico",
     "Invalid date range": "Invalid date range",
-    "Click to close": "Clicca per chiudere"
+    "Click to close": "Clicca per chiudere",
+    "Add Member by Username": "Aggiungi membro per nome utente",
+    "Enter the username to add": "Inserisci il nome utente da aggiungere",
+    "The member has been added": "Il membro è stato aggiunto",
+    "The username cannot be empty": "Il nome utente non può essere vuoto"
 }

@@ -155,7 +155,7 @@ const { tt } = useI18n();
 
 const snackbar = useTemplateRef<SnackBarType>('snackbar');
 
-const allProviders = ALL_LLM_PROVIDERS;
+const allProviders = computed(() => ALL_LLM_PROVIDERS.map(item => ({ ...item, name: tt(item.name) })));
 
 const provider = ref<string>('openai');
 const baseUrl = ref<string>('');

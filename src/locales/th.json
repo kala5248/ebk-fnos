@@ -2992,5 +2992,9 @@
     "Parameter Invalid": "พารามิเตอร์ไม่ถูกต้อง",
     "Numeric Overflow": "ตัวเลขล้น",
     "Invalid date range": "Invalid date range",
-    "Click to close": "คลิกเพื่อปิด"
+    "Click to close": "คลิกเพื่อปิด",
+    "Add Member by Username": "เพิ่มสมาชิกด้วยชื่อผู้ใช้",
+    "Enter the username to add": "ป้อนชื่อผู้ใช้ที่ต้องการเพิ่ม",
+    "The member has been added": "เพิ่มสมาชิกแล้ว",
+    "The username cannot be empty": "ชื่อผู้ใช้ต้องไม่ว่างเปล่า"
 }

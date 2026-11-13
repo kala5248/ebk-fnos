@@ -77,6 +77,61 @@ func (s *TokenService) CreateToken(c *core.WebContext, user *models.User) (strin
 	return token, claims, err
 }
 
+// CreateOrReuseFnOSGatewayToken reuses the existing normal token of the same device (identified by user agent)
+// so that entering the application again does not create one more session record.
+func (s *TokenService) CreateOrReuseFnOSGatewayToken(c *core.WebContext, user *models.User) (string, *core.UserTokenClaims, error) {
+	userAgent := s.getUserAgent(c)
+
+	if strings.TrimSpace(userAgent) == "" {
+		token, claims, _, err := s.createToken(c, user, core.USER_TOKEN_TYPE_NORMAL, userAgent, "", s.CurrentConfig().TokenExpiredTimeDuration)
+		return token, claims, err
+	}
+
+	now := time.Now().Unix()
+	records := make([]*models.TokenRecord, 0, 8)
+	err := s.TokenDB(user.Uid).NewSession(c).
+		Cols("uid", "user_token_id", "token_type", "secret", "user_agent", "created_unix_time", "expired_unix_time", "last_seen_unix_time").
+		Where("uid=? AND token_type=? AND user_agent=? AND expired_unix_time>?", user.Uid, core.USER_TOKEN_TYPE_NORMAL, userAgent, now).
+		Asc("created_unix_time").
+		Find(&records)
+
+	if err != nil {
+		return "", nil, err
+	}
+
+	if len(records) < 1 {
+		token, claims, _, err := s.createToken(c, user, core.USER_TOKEN_TYPE_NORMAL, userAgent, "", s.CurrentConfig().TokenExpiredTimeDuration)
+		return token, claims, err
+	}
+
+	// Keep only the latest token of this device, older duplicates are stale sessions.
+	rec := records[len(records)-1]
+
+	if len(records) > 1 {
+		_ = s.DeleteTokens(c, user.Uid, records[:len(records)-1])
+	}
+
+	claims := &core.UserTokenClaims{
+		UserTokenId: utils.Int64ToString(rec.UserTokenId),
+		Uid:         rec.Uid,
+		Username:    user.Username,
+		Type:        rec.TokenType,
+		IssuedAt:    rec.CreatedUnixTime,
+		ExpiresAt:   rec.ExpiredUnixTime,
+	}
+
+	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenString, err := jwtToken.SignedString([]byte(rec.Secret))
+
+	if err != nil {
+		return "", nil, err
+	}
+
+	_ = s.UpdateTokenLastSeen(c, rec)
+
+	return tokenString, claims, nil
+}
+
 // CreateRequire2FAToken generates a new token requiring user to verify 2fa passcode and saves to database
 func (s *TokenService) CreateRequire2FAToken(c *core.WebContext, user *models.User) (string, *core.UserTokenClaims, error) {
 	token, claims, _, err := s.createToken(c, user, core.USER_TOKEN_TYPE_REQUIRE_2FA, s.getUserAgent(c), "", s.CurrentConfig().TemporaryTokenExpiredTimeDuration)

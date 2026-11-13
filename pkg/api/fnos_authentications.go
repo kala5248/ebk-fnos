@@ -223,7 +223,7 @@ func (a *FnOSAuthenticationsApi) FnOSLoginHandler(c *core.WebContext) (any, *err
 
 	_ = externalAuth
 
-	token, claims, err := a.tokens.CreateToken(c, user)
+	token, claims, err := a.tokens.CreateOrReuseFnOSGatewayToken(c, user)
 
 	if err != nil {
 		log.Errorf(c, "[fnos_authentications.FnOSLoginHandler] failed to create token for user \"uid:%d\", because %s", user.Uid, err.Error())
@@ -299,7 +299,7 @@ func (a *FnOSAuthenticationsApi) FnOSGatewayLoginHandler(c *core.WebContext) (an
 		return nil, errs.ErrFnOSUserRequireTwoFactor
 	}
 
-	token, claims, err := a.tokens.CreateToken(c, user)
+	token, claims, err := a.tokens.CreateOrReuseFnOSGatewayToken(c, user)
 
 	if err != nil {
 		log.Errorf(c, "[fnos_authentications.FnOSGatewayLoginHandler] failed to create token for user \"uid:%d\", because %s", user.Uid, err.Error())

@@ -2992,5 +2992,9 @@
     "Parameter Invalid": "ಅಮಾನ್ಯವಾದ ಪ್ಯಾರಾಮೀಟರ್",
     "Numeric Overflow": "ಸಂಖ್ಯಾ ಓವರ್‌ಫ್ಲೋ",
     "Invalid date range": "Invalid date range",
-    "Click to close": "ಮುಚ್ಚಲು ಕ್ಲಿಕ್ ಮಾಡಿ"
+    "Click to close": "ಮುಚ್ಚಲು ಕ್ಲಿಕ್ ಮಾಡಿ",
+    "Add Member by Username": "ಬಳಕೆದಾರಹೆಸರಿನಿಂದ ಸದಸ್ಯರನ್ನು ಸೇರಿಸಿ",
+    "Enter the username to add": "ಸೇರಿಸಲು ಬಳಕೆದಾರಹೆಸರನ್ನು ನಮೂದಿಸಿ",
+    "The member has been added": "ಸದಸ್ಯರನ್ನು ಸೇರಿಸಲಾಗಿದೆ",
+    "The username cannot be empty": "ಬಳಕೆದಾರಹೆಸರು ಖಾಲಿ ಇರಬಾರದು"
 }

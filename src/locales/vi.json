@@ -2992,5 +2992,9 @@
     "Parameter Invalid": "Tham số không hợp lệ",
     "Numeric Overflow": "Tràn số",
     "Invalid date range": "Invalid date range",
-    "Click to close": "Nhấp để đóng"
+    "Click to close": "Nhấp để đóng",
+    "Add Member by Username": "Thêm thành viên bằng tên người dùng",
+    "Enter the username to add": "Nhập tên người dùng cần thêm",
+    "The member has been added": "Thành viên đã được thêm",
+    "The username cannot be empty": "Tên người dùng không được để trống"
 }

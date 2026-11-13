@@ -751,8 +751,12 @@ export const useRootStore = defineStore('root', () => {
                     return;
                 }
 
+                const switchedToAnotherUser = !!currentUsername && currentUsername !== newUsername;
+
                 applyFnOSAuthResponse(data).then(() => {
-                    clearCurrentLedgerId();
+                    if (switchedToAnotherUser) {
+                        clearCurrentLedgerId();
+                    }
                     accountsStore.updateAccountListInvalidState(true);
                     transactionCategoriesStore.updateTransactionCategoryListInvalidState(true);
                     transactionTagsStore.updateTransactionTagListInvalidState(true);

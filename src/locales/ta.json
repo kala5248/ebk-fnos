@@ -2992,5 +2992,9 @@
     "Parameter Invalid": "தவறான அளவுரு",
     "Numeric Overflow": "எண் வழிதல்",
     "Invalid date range": "Invalid date range",
-    "Click to close": "மூட கிளிக் செய்யவும்"
+    "Click to close": "மூட கிளிக் செய்யவும்",
+    "Add Member by Username": "பயனர்பெயர் மூலம் உறுப்பினரைச் சேர்க்கவும்",
+    "Enter the username to add": "சேர்க்க வேண்டிய பயனர்பெயரை உள்ளிடவும்",
+    "The member has been added": "உறுப்பினர் சேர்க்கப்பட்டார்",
+    "The username cannot be empty": "பயனர்பெயர் காலியாக இருக்கக்கூடாது"
 }
