@@ -587,6 +587,7 @@ export interface TransactionEditOptions extends SetTransactionOptions {
     autoUploadPicture?: File;
     autoRecognizeClipboardText?: string;
     forceRecognizeText?: boolean;
+    autoSaveAfterRecognition?: boolean;
     noTransactionDraft?: boolean;
 }
 
@@ -724,6 +725,8 @@ const isTransactionModified = computed<boolean>(() => {
     }
 });
 
+const autoSaveAfterRecognition = ref<boolean>(false);
+
 function open(options: TransactionEditOptions): Promise<TransactionEditResponse | undefined> {
     addByTemplateId.value = null;
     duplicateFromId.value = null;
@@ -736,6 +739,7 @@ function open(options: TransactionEditOptions): Promise<TransactionEditResponse 
     setGeoLocationByClickMap.value = false;
     originalTransactionEditable.value = false;
     noTransactionDraft.value = options.noTransactionDraft || false;
+    autoSaveAfterRecognition.value = options.autoSaveAfterRecognition || false;
 
     initOptions.value = options;
 
@@ -1016,6 +1020,11 @@ function recognizeText(text: string): void {
     transactionsStore.recognizeTransactionText({ text }).then(response => {
         updateTransactionModelFromRecognizedResponse(response);
         recognizing.value = false;
+
+        if (autoSaveAfterRecognition.value) {
+            autoSaveAfterRecognition.value = false;
+            save(AfterSaveAction.GoBack);
+        }
     }).catch(error => {
         recognizing.value = false;
 

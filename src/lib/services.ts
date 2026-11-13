@@ -335,6 +335,16 @@ axios.interceptors.response.use(response => {
     return Promise.reject(error);
 });
 
+function getStatisticsLedgerQueryParam(): string {
+    const ledgerId = getCurrentLedgerId();
+
+    if (!ledgerId || ledgerId === '0') {
+        return '';
+    }
+
+    return `ledgerId=${encodeURIComponent(ledgerId)}`;
+}
+
 export default {
     setLocale: (locale: string) => {
         axios.defaults.headers.common['Accept-Language'] = locale;
@@ -495,7 +505,8 @@ export default {
         return axios.post<ApiResponse<TwoFactorEnableConfirmResponse>>('v1/users/2fa/recovery/regenerate.json', req);
     },
     getUserDataStatistics: (): ApiResponsePromise<DataStatisticsResponse> => {
-        return axios.get<ApiResponse<DataStatisticsResponse>>('v1/data/statistics.json');
+        const ledgerQuery = getStatisticsLedgerQueryParam();
+        return axios.get<ApiResponse<DataStatisticsResponse>>('v1/data/statistics.json' + (ledgerQuery ? '?' + ledgerQuery : ''));
     },
     getExportedUserData: (fileType: string, req?: ExportTransactionDataRequest): Promise<AxiosResponse<BlobPart>> => {
         let params = '';
@@ -607,7 +618,8 @@ export default {
             queryParams.push(`match_mode=${req.matchMode}`);
         }
 
-        return axios.get<ApiResponse<TransactionStatisticResponse>>(`v1/transactions/statistics.json?use_transaction_timezone=${req.useTransactionTimezone}` + (queryParams.length ? '&' + queryParams.join('&') : ''));
+        const ledgerQuery = getStatisticsLedgerQueryParam();
+        return axios.get<ApiResponse<TransactionStatisticResponse>>(`v1/transactions/statistics.json?use_transaction_timezone=${req.useTransactionTimezone}` + (queryParams.length ? '&' + queryParams.join('&') : '') + (ledgerQuery ? '&' + ledgerQuery : ''));
     },
     getTransactionStatisticsTrends: (req: TransactionStatisticTrendsRequest): ApiResponsePromise<TransactionStatisticTrendsResponseItem[]> => {
         const queryParams: string[] = [];
@@ -632,7 +644,8 @@ export default {
             queryParams.push(`match_mode=${req.matchMode}`);
         }
 
-        return axios.get<ApiResponse<TransactionStatisticTrendsResponseItem[]>>(`v1/transactions/statistics/trends.json?use_transaction_timezone=${req.useTransactionTimezone}` + (queryParams.length ? '&' + queryParams.join('&') : ''));
+        const ledgerQuery = getStatisticsLedgerQueryParam();
+        return axios.get<ApiResponse<TransactionStatisticTrendsResponseItem[]>>(`v1/transactions/statistics/trends.json?use_transaction_timezone=${req.useTransactionTimezone}` + (queryParams.length ? '&' + queryParams.join('&') : '') + (ledgerQuery ? '&' + ledgerQuery : ''));
     },
     getTransactionStatisticsAssetTrends: (req: TransactionStatisticAssetTrendsRequest): ApiResponsePromise<TransactionStatisticAssetTrendsResponseItem[]> => {
         const queryParams: string[] = [];
@@ -645,7 +658,8 @@ export default {
             queryParams.push(`end_time=${req.endTime}`);
         }
 
-        return axios.get<ApiResponse<TransactionStatisticAssetTrendsResponseItem[]>>('v1/transactions/statistics/asset_trends.json' + (queryParams.length ? '?' + queryParams.join('&') : ''));
+        const ledgerQuery = getStatisticsLedgerQueryParam();
+        return axios.get<ApiResponse<TransactionStatisticAssetTrendsResponseItem[]>>('v1/transactions/statistics/asset_trends.json' + (queryParams.length || ledgerQuery ? '?' : '') + queryParams.join('&') + (queryParams.length && ledgerQuery ? '&' : '') + ledgerQuery);
     },
     getTransactionAmounts: (params: TransactionAmountsRequestParams, excludeAccountIds: string[], excludeCategoryIds: string[], tagFilter: string): ApiResponsePromise<TransactionAmountsResponse> => {
         const req = TransactionAmountsRequest.of(params);

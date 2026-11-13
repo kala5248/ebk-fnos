@@ -3070,5 +3070,8 @@
     "AI Accounting": "AI 记账",
     "Enter one sentence and AI will recognize it, then you can confirm the transaction in the form below.": "输入一句话，AI 识别后进入记账表单，确认无误后提交。",
     "Transaction Description": "交易描述",
-    "For example: Lunch yesterday cost 35 yuan": "例如：昨天中午吃饭花了35元"
+    "For example: Lunch yesterday cost 35 yuan": "例如：昨天中午吃饭花了35元",
+    "Recognize and Review": "识别并进入表单",
+    "Recognize and Save": "识别并直接保存",
+    "Enter one sentence and AI will recognize it.": "输入一句话，AI 将自动识别。"
 }

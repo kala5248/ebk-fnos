@@ -689,13 +689,14 @@
                             :label="tt('Transaction Description')"
                             :placeholder="tt('For example: Lunch yesterday cost 35 yuan')"
                             v-model="aiTextInput"
-                            @keydown.ctrl.enter="submitAiTextRecognition"
-                            @keydown.meta.enter="submitAiTextRecognition" />
+                            @keydown.ctrl.enter="submitAiTextRecognition(false)"
+                            @keydown.meta.enter="submitAiTextRecognition(false)" />
             </v-card-text>
             <v-card-actions>
                 <v-spacer />
                 <v-btn color="default" variant="text" @click="closeAiTextRecognitionDialog">{{ tt('Cancel') }}</v-btn>
-                <v-btn color="primary" :disabled="!aiTextInput || !aiTextInput.trim()" @click="submitAiTextRecognition">{{ tt('Recognize') }}</v-btn>
+                <v-btn color="primary" variant="tonal" :disabled="!aiTextInput || !aiTextInput.trim()" @click="submitAiTextRecognition(true)">{{ tt('Recognize and Save') }}</v-btn>
+                <v-btn color="primary" :disabled="!aiTextInput || !aiTextInput.trim()" @click="submitAiTextRecognition(false)">{{ tt('Recognize and Review') }}</v-btn>
             </v-card-actions>
         </v-card>
     </v-dialog>
@@ -1647,7 +1648,7 @@ function changeAmountFilter(filterType: string): void {
     updateUrlWhenChanged(changed);
 }
 
-function add(template?: TransactionTemplate, autoRecognizeClipboardText?: string, forceRecognizeText?: boolean): void {
+function add(template?: TransactionTemplate, autoRecognizeClipboardText?: string, forceRecognizeText?: boolean, autoSaveAfterRecognition?: boolean): void {
     const currentUnixTime = getCurrentUnixTime();
 
     let newTransactionTime: number | undefined = undefined;
@@ -1668,7 +1669,8 @@ function add(template?: TransactionTemplate, autoRecognizeClipboardText?: string
         tagIds: objectFieldWithValueToArrayItem(queryAllFilterTagIds.value, true).join(',') || '',
         template: template,
         autoRecognizeClipboardText: autoRecognizeClipboardText,
-        forceRecognizeText: forceRecognizeText
+        forceRecognizeText: forceRecognizeText,
+        autoSaveAfterRecognition: autoSaveAfterRecognition
     }).then(result => {
         if (result && result.message) {
             snackbar.value?.showMessage(result.message);
@@ -1694,7 +1696,7 @@ function closeAiTextRecognitionDialog(): void {
     showAiTextDialog.value = false;
 }
 
-function submitAiTextRecognition(): void {
+function submitAiTextRecognition(autoSave: boolean): void {
     const text = aiTextInput.value && aiTextInput.value.trim() ? aiTextInput.value.trim() : '';
 
     if (!text) {
@@ -1702,7 +1704,7 @@ function submitAiTextRecognition(): void {
     }
 
     showAiTextDialog.value = false;
-    add(undefined, text, true);
+    add(undefined, text, true, autoSave);
 }
 
 function showTransactionCreator(transaction: Transaction): boolean {

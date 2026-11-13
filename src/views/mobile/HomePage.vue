@@ -3,6 +3,8 @@
         <f7-navbar>
             <f7-nav-title :title="tt('global.app.title')"></f7-nav-title>
             <f7-nav-right>
+                <f7-link icon-f7="wand_stars" :aria-label="tt('AI Accounting')"
+                         @click="showAiTextSheet = true" v-if="isTransactionFromAITextRecognitionEnabled()"></f7-link>
                 <f7-link icon-f7="arrow_right_arrow_left" :aria-label="tt('Switch Ledger')"
                          @click="showLedgerActionSheet = true" v-if="ledgers.length > 1"></f7-link>
             </f7-nav-right>
@@ -78,6 +80,8 @@
             </f7-list>
         </f7-popover>
 
+        <a-i-text-input-sheet v-model:show="showAiTextSheet" @text:confirm="recognizeAiTextFromHome" />
+
         <a-i-image-recognition-sheet ref="aiImageRecognitionSheet"
                                      v-model:show="showAIReceiptImageRecognitionSheet"
                                      @recognition:change="onReceiptRecognitionChanged"/>
@@ -86,6 +90,7 @@
 
 <script setup lang="ts">
 import AIImageRecognitionSheet, { type AIImageRecognitionResult } from '@/components/mobile/AIImageRecognitionSheet.vue';
+import AITextInputSheet from '@/components/mobile/AITextInputSheet.vue';
 import OverviewDashboard from './overview/OverviewDashboard.vue';
 
 import { ref, computed, useTemplateRef } from 'vue';
@@ -312,6 +317,16 @@ function reloadOverviewData(force: boolean): Promise<unknown>[] {
     }
 
     return promises;
+}
+
+const showAiTextSheet = ref<boolean>(false);
+
+function recognizeAiTextFromHome(text: string, autoSave: boolean): void {
+    if (!text || !text.trim()) {
+        return;
+    }
+
+    props.f7router.navigate(`/transaction/add?aiText=${encodeURIComponent(text.trim())}&aiAutoSave=${autoSave ? 1 : 0}`);
 }
 
 function addByRecognizingClipboardText(): void {

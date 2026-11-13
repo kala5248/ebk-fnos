@@ -1245,6 +1245,10 @@ function recognizeText(text: string): void {
         updateTransactionModelFromRecognizedResponse(response);
         closeAllDialog();
         recognizing.value = false;
+
+        if (query['aiAutoSave'] === '1') {
+            save(AfterSaveAction.GoBack);
+        }
     }).catch(error => {
         closeAllDialog();
         recognizing.value = false;
