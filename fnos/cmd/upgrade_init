@@ -1,22 +1,55 @@
 #!/bin/bash
 set -u
-MAIN="$(dirname "${TRIM_APPDEST}")/cmd/main"
 LOG_FILE="${TRIM_TEMP_LOGFILE:-${TRIM_PKGVAR}/upgrade.log}"
-
-# Stop the old instance, then wait for the service port to be released before
-# the package manager replaces the target directory.
-"${MAIN}" stop >/dev/null 2>&1 || true
-
+BIN="${TRIM_APPDEST%/}/ezbookkeeping"
 CONF="${TRIM_PKGETC}/ezbookkeeping.ini"
+PID_FILE="${TRIM_PKGVAR}/app.pid"
+
+log() {
+    echo "$*" >> "${LOG_FILE}" 2>/dev/null || true
+}
+
+log "upgrade_init: APPDEST=${TRIM_APPDEST} PKGVAR=${TRIM_PKGVAR} PKGETC=${TRIM_PKGETC} BIN=${BIN}"
+
+# 1) Stop the instance recorded by the pid file.
+if [ -f "${PID_FILE}" ]; then
+    pid="$(tr -d '[:space:]' < "${PID_FILE}")"
+    if [ -n "${pid}" ]; then
+        kill "${pid}" 2>/dev/null || true
+        for _ in $(seq 1 10); do
+            kill -0 "${pid}" 2>/dev/null || break
+            sleep 1
+        done
+        kill -9 "${pid}" 2>/dev/null || true
+    fi
+    rm -f "${PID_FILE}"
+fi
+
+# 2) Kill processes that survived because the pid file was lost. Use the
+#    exact target binary path, not cmd/main (whose path differs on some fnOS
+#    versions).
+if command -v pgrep >/dev/null 2>&1; then
+    for pid in $(pgrep -f "${BIN}" 2>/dev/null || true); do
+        log "upgrade_init: kill leftover pid ${pid}"
+        kill "${pid}" 2>/dev/null || true
+    done
+    for _ in $(seq 1 5); do
+        [ -z "$(pgrep -f "${BIN}" 2>/dev/null || true)" ] && break
+        sleep 1
+    done
+    for pid in $(pgrep -f "${BIN}" 2>/dev/null || true); do
+        kill -9 "${pid}" 2>/dev/null || true
+    done
+fi
+
+# 3) Wait for the HTTP port to be released.
 PORT="$(grep -E '^http_port = ' "${CONF}" 2>/dev/null | head -n 1 | cut -d '=' -f 2 | tr -d ' ')"
-if [ -n "${PORT}" ]; then
+if [ -n "${PORT}" ] && command -v ss >/dev/null 2>&1; then
     for _ in $(seq 1 15); do
-        if ! ss -ltn "sport = :${PORT}" 2>/dev/null | grep -q LISTEN; then
-            break
-        fi
+        ss -ltn "sport = :${PORT}" 2>/dev/null | grep -q LISTEN || break
         sleep 1
     done
 fi
 
-echo "upgrade_init completed for ${TRIM_APPNAME:-ebk-fnos} ${TRIM_OLD_APPVER:-unknown} -> ${TRIM_APPVER:-unknown}" >> "${LOG_FILE}" 2>/dev/null || true
+log "upgrade_init completed: ${TRIM_OLD_APPVER:-unknown} -> ${TRIM_APPVER:-unknown}"
 exit 0

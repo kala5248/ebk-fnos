@@ -1,22 +1,66 @@
 #!/bin/bash
 set -u
-MAIN="$(dirname "${TRIM_APPDEST}")/cmd/main"
 LOG_FILE="${TRIM_TEMP_LOGFILE:-${TRIM_PKGVAR}/upgrade.log}"
+APP_LOG="${TRIM_PKGVAR}/app.log"
+PID_FILE="${TRIM_PKGVAR}/app.pid"
+BIN="${TRIM_APPDEST%/}/ezbookkeeping"
+CONF="${TRIM_PKGETC}/ezbookkeeping.ini"
 
-chmod +x "${TRIM_APPDEST}/ezbookkeeping" "${TRIM_APPDEST}/scripts/write_config.sh" 2>/dev/null || true
+log() {
+    echo "$*" >> "${LOG_FILE}" 2>/dev/null || true
+}
 
-# Refresh generated paths for the new target directory, while preserving the
-# user's existing port/database settings.
-"${TRIM_APPDEST}/scripts/write_config.sh"
-if [ $? -ne 0 ]; then
-    echo "升级后生成配置失败，请检查 ${TRIM_PKGETC}/ezbookkeeping.ini" >> "${LOG_FILE}" 2>/dev/null || true
+log "upgrade_callback: APPDEST=${TRIM_APPDEST} BIN=${BIN} CONF=${CONF}"
+
+if [ ! -x "${BIN}" ]; then
+    log "upgrade_callback: binary missing or not executable: ${BIN}"
+    log "upgrade_callback: target contents: $(ls -la "${TRIM_APPDEST}" 2>/dev/null | tr '\n' ' ')"
     exit 1
 fi
 
-"${MAIN}" start
-rc=$?
-if [ ${rc} -ne 0 ]; then
-    echo "升级后启动 ebk-fnos 失败（退出码 ${rc}）：" >> "${LOG_FILE}" 2>/dev/null || true
-    tail -n 60 "${TRIM_PKGVAR}/app.log" 2>/dev/null >> "${LOG_FILE}" || true
+chmod +x "${BIN}" "${TRIM_APPDEST}/scripts/write_config.sh" 2>/dev/null || true
+
+"${TRIM_APPDEST}/scripts/write_config.sh" || {
+    log "upgrade_callback: write_config.sh failed"
+    exit 1
+}
+
+mkdir -p "${TRIM_PKGVAR}"
+cd "${TRIM_APPDEST}" || {
+    log "upgrade_callback: cannot cd ${TRIM_APPDEST}"
+    exit 1
+}
+
+# A previous process may still own the port if upgrade_init could not find it.
+PORT="$(grep -E '^http_port = ' "${CONF}" 2>/dev/null | head -n 1 | cut -d '=' -f 2 | tr -d ' ')"
+if [ -n "${PORT}" ] && command -v ss >/dev/null 2>&1; then
+    for pid in $(ss -ltnp "sport = :${PORT}" 2>/dev/null | grep -o 'pid=[0-9]*' | cut -d '=' -f 2 | sort -u); do
+        cmd="$(ps -o args= -p "${pid}" 2>/dev/null || true)"
+        case "${cmd}" in
+            *ezbookkeeping*) kill "${pid}" 2>/dev/null || true ;;
+        esac
+    done
 fi
-exit ${rc}
+
+: > "${APP_LOG}" 2>/dev/null || true
+nohup "${BIN}" server run --conf-path "${CONF}" >> "${APP_LOG}" 2>&1 &
+echo $! > "${PID_FILE}"
+
+for _ in $(seq 1 20); do
+    if ! kill -0 "$(cat "${PID_FILE}" 2>/dev/null)" 2>/dev/null; then
+        log "upgrade_callback: process exited, tail of ${APP_LOG}:"
+        tail -n 60 "${APP_LOG}" 2>/dev/null >> "${LOG_FILE}" || true
+        exit 1
+    fi
+    if [ -n "${PORT}" ] && command -v curl >/dev/null 2>&1; then
+        if curl -fsS --max-time 2 "http://127.0.0.1:${PORT}/server_settings.js" >/dev/null 2>&1; then
+            log "upgrade_callback: HTTP ready on port ${PORT}"
+            exit 0
+        fi
+    fi
+    sleep 1
+done
+
+log "upgrade_callback: process alive but HTTP not ready after 20s, tail of ${APP_LOG}:"
+tail -n 30 "${APP_LOG}" 2>/dev/null >> "${LOG_FILE}" || true
+exit 1
