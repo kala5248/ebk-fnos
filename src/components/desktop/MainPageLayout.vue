@@ -106,9 +106,9 @@
                                         <v-tooltip activator="parent">{{ tt('AI Accounting') }}</v-tooltip>
                                     </v-btn>
                                 </router-link>
+                                <ledger-switcher class="ms-2 d-none d-md-flex" />
                             </slot>
                         </div>
-                        <ledger-switcher class="me-3 d-none d-md-flex" />
                         <v-spacer />
                         <v-btn class="ms-2" color="primary" variant="text" density="comfortable"
                                :aria-label="tt('Use on Mobile Device')" :icon="true"

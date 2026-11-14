@@ -5,6 +5,7 @@
 #   ./build-fnos-fpk.sh                 # build backend + frontend, then pack
 #   ./build-fnos-fpk.sh --skip-frontend # reuse existing dist/ (CI / second run)
 #   ./build-fnos-fpk.sh --no-pack       # assemble build/fnos only
+#   ./build-fnos-fpk.sh --min-os-version 1.2.0401 # set manifest os_min_version
 #
 # Requirements: Go (>= 1.27 toolchain auto-download), GCC, Node.js + npm.
 # Optional: fnpack (official fnOS packaging tool). Without it the script falls
@@ -16,17 +17,26 @@ cd "${ROOT_DIR}"
 
 SKIP_FRONTEND=0
 NO_PACK=0
+MIN_OS_VERSION=
 
-for arg in "$@"; do
-    case "${arg}" in
-        --skip-frontend) SKIP_FRONTEND=1 ;;
-        --no-pack) NO_PACK=1 ;;
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --skip-frontend) SKIP_FRONTEND=1; shift ;;
+        --no-pack) NO_PACK=1; shift ;;
+        --min-os-version)
+            if [ $# -lt 2 ] || [ -z "${2:-}" ]; then
+                echo "--min-os-version requires a version value" >&2
+                exit 1
+            fi
+            MIN_OS_VERSION="$2"
+            shift 2
+            ;;
         -h|--help)
             sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'
             exit 0
             ;;
         *)
-            echo "未知参数：${arg}" >&2
+            echo "未知参数：$1" >&2
             exit 1
             ;;
     esac
@@ -86,6 +96,16 @@ cp LICENSE "${BUILD_DIR}/LICENSE" 2>/dev/null || true
 
 # 与 package.json 中的版本保持一致
 sed -i "s|^version = .*|version = ${VERSION}|" "${BUILD_DIR}/manifest"
+
+# 允许打包时指定最低系统版本（manifest os_min_version）
+if [ -n "${MIN_OS_VERSION}" ]; then
+    if grep -q '^os_min_version' "${BUILD_DIR}/manifest"; then
+        sed -i "s|^os_min_version = .*|os_min_version = ${MIN_OS_VERSION}|" "${BUILD_DIR}/manifest"
+    else
+        printf 'os_min_version = %s\n' "${MIN_OS_VERSION}" >> "${BUILD_DIR}/manifest"
+    fi
+    echo "==> 最低系统版本：${MIN_OS_VERSION}"
+fi
 
 chmod +x "${BUILD_DIR}/cmd/"* "${BUILD_DIR}/app/scripts/write_config.sh" "${BUILD_DIR}/app/ezbookkeeping"
 

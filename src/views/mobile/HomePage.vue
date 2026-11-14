@@ -5,6 +5,8 @@
             <f7-nav-right>
                 <f7-link icon-f7="wand_stars" :aria-label="tt('AI Accounting')"
                          @click="showAiTextSheet = true" v-if="isTransactionFromAITextRecognitionEnabled()"></f7-link>
+                <f7-link icon-f7="device_desktop" :aria-label="tt('Switch to Desktop Version')"
+                         @click="switchToDesktopVersion"></f7-link>
                 <f7-link icon-f7="arrow_right_arrow_left" :aria-label="tt('Switch Ledger')"
                          @click="showLedgerActionSheet = true" v-if="ledgers.length > 1"></f7-link>
             </f7-nav-right>
@@ -131,6 +133,7 @@ import services from '@/lib/services.ts';
 import { getCurrentLedgerId, setCurrentLedgerId } from '@/lib/ledger.ts';
 import type { LedgerInfoResponse } from '@/models/ledger.ts';
 import { isUserLogined, isUserUnlocked } from '@/lib/userstate.ts';
+import { getDesktopVersionPath } from '@/lib/version.ts';
 import { getShareCacheImageBlob } from '@/lib/cache.ts';
 import {
     isTransactionFromAITextRecognitionEnabled,
@@ -194,6 +197,10 @@ function loadLedgers(): void {
 
 function isCurrentLedger(ledger: LedgerInfoResponse): boolean {
     return getCurrentLedgerId() === ledger.id;
+}
+
+function switchToDesktopVersion(): void {
+    window.location.replace(getDesktopVersionPath());
 }
 
 function switchLedger(ledger: LedgerInfoResponse): void {
