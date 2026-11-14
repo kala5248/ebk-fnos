@@ -24,10 +24,22 @@ DB_TYPE="${wizard_db_type:-}"
 [ -z "${DB_TYPE}" ] && DB_TYPE="$(old_value type)"
 [ -z "${DB_TYPE}" ] && DB_TYPE="sqlite3"
 
-DB_HOST="${wizard_db_host:-127.0.0.1:3306}"
-DB_NAME="${wizard_db_name:-ezbookkeeping}"
-DB_USER="${wizard_db_user:-ezbookkeeping}"
+DB_HOST="${wizard_db_host:-}"
+[ -z "${DB_HOST}" ] && DB_HOST="$(old_value host)"
+[ -z "${DB_HOST}" ] && DB_HOST="127.0.0.1:3306"
+
+DB_NAME="${wizard_db_name:-}"
+[ -z "${DB_NAME}" ] && DB_NAME="$(old_value name)"
+[ -z "${DB_NAME}" ] && DB_NAME="ezbookkeeping"
+
+DB_USER="${wizard_db_user:-}"
+[ -z "${DB_USER}" ] && DB_USER="$(old_value user)"
+[ -z "${DB_USER}" ] && DB_USER="ezbookkeeping"
+
 DB_PASS="${wizard_db_passwd:-}"
+if [ -z "${DB_PASS}" ] && [ -f "${CONF_FILE}" ]; then
+    DB_PASS="$(old_value passwd)"
+fi
 
 # Login is handled by the fnOS unified gateway (X-Trim-* headers on app.sock),
 # so the OAuth flow is always disabled and no client credentials are needed.
@@ -46,7 +58,7 @@ if [ -z "${SECRET}" ]; then
 fi
 
 if [ ! -f "${TEMPLATE}" ]; then
-    echo "找不到配置模板：${TEMPLATE}" > "${TRIM_TEMP_LOGFILE}"
+    echo "找不到配置模板：${TEMPLATE}" > "${LOG_FILE}"
     exit 1
 fi
 
@@ -68,7 +80,7 @@ sed \
     "${TEMPLATE}" > "${CONF_FILE}"
 
 if [ ! -s "${CONF_FILE}" ]; then
-    echo "生成配置文件失败：${CONF_FILE}" > "${TRIM_TEMP_LOGFILE}"
+    echo "生成配置文件失败：${CONF_FILE}" > "${LOG_FILE}"
     exit 1
 fi
 

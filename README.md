@@ -80,7 +80,7 @@ enable_user_llm_config = true
 ./build.sh package -o ebk-fnos.tar.gz
 ```
 
-构建产物版本取自 `package.json`，本分支为 `2.1.1-fnos-0.0.2`。
+构建产物版本取自 `package.json`，本分支为 `2.1.1-fnos-0.0.3`。
 
 ### 运行
 
@@ -98,7 +98,7 @@ enable_user_llm_config = true
 
 ```bash
 ./build-fnos-fpk.sh
-# 产物：build/ebk-fnos-2.1.1-fnos-0.0.2-x86.fpk
+# 产物：build/ebk-fnos-2.1.1-fnos-0.0.3-x86.fpk
 ```
 
 可选参数：

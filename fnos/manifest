@@ -1,5 +1,5 @@
 appname = ebk-fnos
-version = 2.1.1-fnos-0.0.2
+version = 2.1.1-fnos-0.0.3
 display_name = ebk-fnos
 desc = 飞牛定制版记账应用 ebk-fnos（基于开源 ezBookkeeping），支持飞牛授权登录、AI 一句话/图片记账、每用户独立模型配置与共享账本。<br>安装时可设置服务端口与数据库（内置 SQLite，或使用外部 MySQL / PostgreSQL）。
 platform = x86

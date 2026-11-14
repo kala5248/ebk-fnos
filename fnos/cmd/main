@@ -5,6 +5,12 @@ CONF="${TRIM_PKGETC}/ezbookkeeping.ini"
 PID_FILE="${TRIM_PKGVAR}/app.pid"
 APP_LOG="${TRIM_PKGVAR}/app.log"
 BIN="${TRIM_APPDEST}/ezbookkeeping"
+LOG_FILE="${TRIM_TEMP_LOGFILE:-${TRIM_PKGVAR}/install.log}"
+
+log_error() {
+    mkdir -p "$(dirname "${LOG_FILE}")" 2>/dev/null || true
+    echo "$*" >> "${LOG_FILE}" 2>/dev/null || true
+}
 
 read_port() {
     grep -E '^http_port = ' "${CONF}" 2>/dev/null | head -n 1 | cut -d '=' -f 2 | tr -d ' '
@@ -21,42 +27,121 @@ is_running() {
     return 1
 }
 
+app_pids() {
+    # Cover both the current target and the previous target path. Upgrade may
+    # leave the old process alive when the pid file was lost.
+    {
+        pgrep -f "${TRIM_APPDEST}/ezbookkeeping" 2>/dev/null || true
+        pgrep -f "/ebk-fnos/target/ezbookkeeping" 2>/dev/null || true
+    } | sort -u
+}
+
+port_pids() {
+    port="$1"
+    if command -v ss >/dev/null 2>&1; then
+        ss -ltnp "sport = :${port}" 2>/dev/null | grep -o 'pid=[0-9]*' | cut -d '=' -f 2 | sort -u
+    elif command -v lsof >/dev/null 2>&1; then
+        lsof -tiTCP:"${port}" -sTCP:LISTEN 2>/dev/null | sort -u
+    fi
+}
+
+wait_port_free() {
+    port="$1"
+    for _ in $(seq 1 20); do
+        [ -z "$(port_pids "${port}")" ] && return 0
+        sleep 1
+    done
+    return 1
+}
+
 do_start() {
     if [ ! -x "${BIN}" ]; then
-        echo "应用可执行文件不存在：${BIN}" > "${TRIM_TEMP_LOGFILE}"
+        log_error "应用可执行文件不存在或不可执行：${BIN}"
         exit 1
     fi
     if [ ! -f "${CONF}" ]; then
-        echo "配置文件不存在：${CONF}" > "${TRIM_TEMP_LOGFILE}"
+        log_error "配置文件不存在：${CONF}"
         exit 1
     fi
     if is_running; then
         exit 0
     fi
+
+    # Clean up a previous instance that survived an upgrade.
+    do_stop
     mkdir -p "${TRIM_PKGVAR}"
-    cd "${TRIM_APPDEST}" || exit 1
+    port="$(read_port)"
+    if [ -n "${port}" ]; then
+        pids="$(port_pids "${port}")"
+        if [ -n "${pids}" ]; then
+            log_error "端口 ${port} 仍被占用，升级后无法启动 ebk-fnos。占用进程：$(ps -o pid=,comm=,args= -p ${pids} 2>/dev/null | tr '\n' ' ')"
+            exit 1
+        fi
+    fi
+
+    cd "${TRIM_APPDEST}" || {
+        log_error "无法进入应用目录：${TRIM_APPDEST}"
+        exit 1
+    }
+    : > "${APP_LOG}" 2>/dev/null || true
     nohup "${BIN}" server run --conf-path "${CONF}" >> "${APP_LOG}" 2>&1 &
     echo $! > "${PID_FILE}"
-    sleep 2
-    if kill -0 "$(cat "${PID_FILE}")" 2>/dev/null; then
-        exit 0
-    fi
-    echo "应用启动失败，请查看日志：${APP_LOG}" > "${TRIM_TEMP_LOGFILE}"
-    exit 1
+
+    # First wait for the process, then for HTTP. Database migration can take
+    # longer than the old 2 second check.
+    for _ in $(seq 1 20); do
+        if ! kill -0 "$(cat "${PID_FILE}" 2>/dev/null)" 2>/dev/null; then
+            log_error "应用启动失败，日志：${APP_LOG}"
+            tail -n 40 "${APP_LOG}" 2>/dev/null | while IFS= read -r line; do log_error "${line}"; done
+            exit 1
+        fi
+        if [ -n "${port}" ] && command -v curl >/dev/null 2>&1; then
+            if curl -fsS --max-time 2 "http://127.0.0.1:${port}/server_settings.js" >/dev/null 2>&1; then
+                exit 0
+            fi
+        fi
+        sleep 1
+    done
+
+    # Process is alive but HTTP is not ready yet; keep it running and let
+    # status checks report the real state.
+    exit 0
 }
 
 do_stop() {
     if is_running; then
         pid="$(cat "${PID_FILE}")"
-        kill "${pid}" 2>/dev/null
-        for _ in 1 2 3 4 5 6 7 8 9 10; do
+        kill "${pid}" 2>/dev/null || true
+        for _ in $(seq 1 10); do
             kill -0 "${pid}" 2>/dev/null || break
             sleep 1
         done
-        kill -9 "${pid}" 2>/dev/null
+        kill -9 "${pid}" 2>/dev/null || true
         rm -f "${PID_FILE}"
     fi
-    exit 0
+
+    # Fallback: kill leftovers whose pid file was lost during upgrade.
+    for pid in $(app_pids); do
+        kill "${pid}" 2>/dev/null || true
+    done
+    for _ in $(seq 1 5); do
+        [ -z "$(app_pids)" ] && break
+        sleep 1
+    done
+    for pid in $(app_pids); do
+        kill -9 "${pid}" 2>/dev/null || true
+    done
+
+    port="$(read_port)"
+    if [ -n "${port}" ]; then
+        for pid in $(port_pids "${port}"); do
+            cmd="$(ps -o args= -p "${pid}" 2>/dev/null || true)"
+            case "${cmd}" in
+                *ezbookkeeping*) kill "${pid}" 2>/dev/null || true ;;
+            esac
+        done
+    fi
+    return 0
 }
 
 case "$1" in
@@ -65,6 +150,7 @@ case "$1" in
         ;;
     stop)
         do_stop
+        exit 0
         ;;
     status)
         if is_running; then

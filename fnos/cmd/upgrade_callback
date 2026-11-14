@@ -1,6 +1,22 @@
 #!/bin/bash
 set -u
 MAIN="$(dirname "${TRIM_APPDEST}")/cmd/main"
-chmod +x "${TRIM_APPDEST}/ezbookkeeping" "${TRIM_APPDEST}/scripts/write_config.sh" 2>/dev/null
+LOG_FILE="${TRIM_TEMP_LOGFILE:-${TRIM_PKGVAR}/upgrade.log}"
+
+chmod +x "${TRIM_APPDEST}/ezbookkeeping" "${TRIM_APPDEST}/scripts/write_config.sh" 2>/dev/null || true
+
+# Refresh generated paths for the new target directory, while preserving the
+# user's existing port/database settings.
+"${TRIM_APPDEST}/scripts/write_config.sh"
+if [ $? -ne 0 ]; then
+    echo "升级后生成配置失败，请检查 ${TRIM_PKGETC}/ezbookkeeping.ini" >> "${LOG_FILE}" 2>/dev/null || true
+    exit 1
+fi
+
 "${MAIN}" start
-exit $?
+rc=$?
+if [ ${rc} -ne 0 ]; then
+    echo "升级后启动 ebk-fnos 失败（退出码 ${rc}）：" >> "${LOG_FILE}" 2>/dev/null || true
+    tail -n 60 "${TRIM_PKGVAR}/app.log" 2>/dev/null >> "${LOG_FILE}" || true
+fi
+exit ${rc}
