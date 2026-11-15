@@ -200,6 +200,30 @@
                     <v-tooltip activator="parent" location="left">{{ tt('AI Accounting') }}</v-tooltip>
                 </v-btn>
             </router-link>
+            <v-menu location="left" offset="12" v-if="floatingLedgers.length > 0">
+                <template #activator="{ props }">
+                    <v-btn v-bind="props" class="quick-action-fab quick-action-fab-ledger"
+                           color="primary" variant="tonal" rounded="circle" size="large"
+                           :aria-label="tt('Switch Ledger')" :icon="true">
+                        <v-icon :icon="mdiAccountMultipleOutline" size="26" />
+                    </v-btn>
+                </template>
+                <v-list density="compact" min-width="220">
+                    <v-list-subheader>{{ tt('Current Ledger') }}</v-list-subheader>
+                    <v-list-item v-for="ledger in floatingLedgers" :key="ledger.id"
+                                 @click="switchFloatingLedger(ledger)">
+                        <v-list-item-title>
+                            {{ ledger.name }}<span class="text-medium-emphasis" v-if="ledger.isPersonal"> ({{ tt('Personal') }})</span>
+                        </v-list-item-title>
+                        <template #append>
+                            <v-icon :icon="mdiCheck" v-if="currentLedgerId === ledger.id" />
+                        </template>
+                    </v-list-item>
+                    <v-divider class="my-1" />
+                    <v-list-item :prepend-icon="mdiCogOutline" :title="tt('Manage Shared Ledgers')"
+                                 to="/settings/shared_ledger" />
+                </v-list>
+            </v-menu>
         </div>
 
         <switch-to-mobile-dialog v-model:show="showMobileQrCode" />
@@ -214,7 +238,7 @@ import AboutDialog from '@/views/desktop/common/dialogs/AboutDialog.vue';
 import LedgerSwitcher from '@/components/desktop/LedgerSwitcher.vue';
 import SnackBar from '@/components/desktop/SnackBar.vue';
 
-import { ref, computed, useTemplateRef } from 'vue';
+import { ref, computed, useTemplateRef, onMounted } from 'vue';
 
 import { useDisplay, useTheme } from 'vuetify';
 import { useRoute, useRouter } from 'vue-router';
@@ -231,6 +255,9 @@ import { ThemeType } from '@/core/theme.ts';
 
 import { getSystemTheme, setExpenseAndIncomeAmountColor } from '@/lib/ui/common.ts';
 import { isTransactionFromAITextRecognitionEnabled } from '@/lib/server_settings.ts';
+import services from '@/lib/services.ts';
+import { getCurrentLedgerId, setCurrentLedgerId } from '@/lib/ledger.ts';
+import type { LedgerInfoResponse } from '@/models/ledger.ts';
 
 import {
     mdiMenu,
@@ -246,6 +273,8 @@ import {
     mdiCompassOutline,
     mdiPlus,
     mdiMagicStaff,
+    mdiAccountMultipleOutline,
+    mdiCheck,
     mdiCellphone,
     mdiThemeLightDark,
     mdiWeatherSunny,
@@ -283,6 +312,8 @@ const showVerticalOverlayMenu = ref<boolean>(false);
 const showLoading = ref<boolean>(false);
 const showMobileQrCode = ref<boolean>(false);
 const showAboutDialog = ref<boolean>(false);
+const floatingLedgers = ref<LedgerInfoResponse[]>([]);
+const currentLedgerId = ref<string>(getCurrentLedgerId());
 
 const currentNickName = computed<string>(() => userStore.currentUserNickname || tt('User'));
 const currentUserAvatar = computed<string | null>(() => userStore.currentUserAvatar);
@@ -352,6 +383,32 @@ function showAddDialogInTransactionListPage(): void {
 function showAiDialogInTransactionListPage(): void {
     desktopPageStore.setShowAiTransactionDialogInTransactionList();
 }
+
+function loadFloatingLedgers(): void {
+    services.getLedgers().then(response => {
+        floatingLedgers.value = (response.data && response.data.result) ? response.data.result : [];
+
+        if (!floatingLedgers.value.some(ledger => ledger.id === currentLedgerId.value)) {
+            currentLedgerId.value = '';
+            setCurrentLedgerId('');
+        }
+    }).catch(() => {
+        floatingLedgers.value = [];
+    });
+}
+
+function switchFloatingLedger(ledger: LedgerInfoResponse): void {
+    if (ledger.id === currentLedgerId.value) {
+        return;
+    }
+
+    setCurrentLedgerId(ledger.id);
+    window.location.reload();
+}
+
+onMounted(() => {
+    loadFloatingLedgers();
+});
 </script>
 
 <style>
