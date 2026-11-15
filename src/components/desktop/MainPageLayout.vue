@@ -256,7 +256,7 @@ import { ThemeType } from '@/core/theme.ts';
 import { getSystemTheme, setExpenseAndIncomeAmountColor } from '@/lib/ui/common.ts';
 import { isTransactionFromAITextRecognitionEnabled } from '@/lib/server_settings.ts';
 import services from '@/lib/services.ts';
-import { getCurrentLedgerId, setCurrentLedgerId } from '@/lib/ledger.ts';
+import { getCurrentLedgerId, setCurrentLedgerId, switchCurrentLedgerAndReload } from '@/lib/ledger.ts';
 import type { LedgerInfoResponse } from '@/models/ledger.ts';
 
 import {
@@ -398,12 +398,8 @@ function loadFloatingLedgers(): void {
 }
 
 function switchFloatingLedger(ledger: LedgerInfoResponse): void {
-    if (ledger.id === currentLedgerId.value) {
-        return;
-    }
-
-    setCurrentLedgerId(ledger.id);
-    window.location.reload();
+    currentLedgerId.value = ledger.id;
+    switchCurrentLedgerAndReload(ledger.id);
 }
 
 onMounted(() => {

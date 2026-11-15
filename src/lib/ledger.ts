@@ -37,3 +37,17 @@ export function clearCurrentLedgerId(): void {
         // ignore
     }
 }
+
+
+// Force a full document navigation after switching ledger, bypassing cached HTML.
+export function switchCurrentLedgerAndReload(ledgerId: string | number): void {
+    setCurrentLedgerId(ledgerId);
+
+    try {
+        const url = new URL(window.location.href);
+        url.searchParams.set('_ledgerSwitch', Date.now().toString());
+        window.location.replace(url.toString());
+    } catch {
+        window.location.reload();
+    }
+}

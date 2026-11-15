@@ -24,7 +24,7 @@ import { ref, computed, onMounted } from 'vue';
 import { useI18n } from '@/locales/helpers.ts';
 
 import services from '@/lib/services.ts';
-import { getCurrentLedgerId, setCurrentLedgerId } from '@/lib/ledger.ts';
+import { getCurrentLedgerId, setCurrentLedgerId, switchCurrentLedgerAndReload } from '@/lib/ledger.ts';
 
 import { mdiAccountMultipleOutline } from '@mdi/js';
 
@@ -62,12 +62,8 @@ function loadLedgers(): void {
 }
 
 function switchLedger(ledgerId: string): void {
-    if (ledgerId === currentLedgerId.value) {
-        return;
-    }
-
-    setCurrentLedgerId(ledgerId);
-    window.location.reload();
+    currentLedgerId.value = ledgerId;
+    switchCurrentLedgerAndReload(ledgerId);
 }
 
 onMounted(() => {

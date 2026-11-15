@@ -282,6 +282,8 @@ axios.interceptors.request.use((config: ApiRequestConfig) => {
 
     if (currentLedgerId && currentLedgerId !== '0' && !config.noAuth && !config.skipLedgerScope) {
         config.headers['X-Ledger-Id'] = currentLedgerId;
+        config.headers['Cache-Control'] = 'no-cache';
+        config.headers['Pragma'] = 'no-cache';
     }
 
     if (needBlockRequest && !config.ignoreBlocked) {
