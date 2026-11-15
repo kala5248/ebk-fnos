@@ -182,6 +182,26 @@
             <v-progress-circular indeterminate></v-progress-circular>
         </v-overlay>
 
+        <div class="desktop-quick-actions" v-if="!noNavbar && showAddTransactionButtonInDesktopNavbar">
+            <router-link class="quick-action-link" to="/transaction/list?pageType=0&dateType=7">
+                <v-btn class="quick-action-fab" color="primary" rounded="circle" size="large"
+                       :aria-label="tt('Add Transaction')" :icon="true"
+                       @click="showAddDialogInTransactionListPage">
+                    <v-icon :icon="mdiPlus" size="26" />
+                    <v-tooltip activator="parent" location="left">{{ tt('Add Transaction') }}</v-tooltip>
+                </v-btn>
+            </router-link>
+            <router-link class="quick-action-link" to="/transaction/list?pageType=0&dateType=7"
+                         v-if="isTransactionFromAITextRecognitionEnabled()">
+                <v-btn class="quick-action-fab quick-action-fab-ai" color="primary" variant="tonal"
+                       rounded="circle" size="large" :aria-label="tt('AI Accounting')" :icon="true"
+                       @click="showAiDialogInTransactionListPage">
+                    <v-icon :icon="mdiMagicStaff" size="26" />
+                    <v-tooltip activator="parent" location="left">{{ tt('AI Accounting') }}</v-tooltip>
+                </v-btn>
+            </router-link>
+        </div>
+
         <switch-to-mobile-dialog v-model:show="showMobileQrCode" />
         <about-dialog v-model:show="showAboutDialog" />
 
@@ -360,5 +380,39 @@ function showAiDialogInTransactionListPage(): void {
     background-size: cover;
     inset: 0;
     pointer-events: none;
+}
+
+.desktop-quick-actions {
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    z-index: 2000;
+    display: none;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.quick-action-link {
+    text-decoration: none;
+    display: block;
+}
+
+.quick-action-fab.v-btn {
+    width: 56px;
+    min-width: 56px;
+    height: 56px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.24);
+}
+
+.quick-action-fab-ai.v-btn {
+    border: 1px solid rgba(var(--v-theme-primary), 0.35);
+    background: rgb(var(--v-theme-surface)) !important;
+    color: rgb(var(--v-theme-primary)) !important;
+}
+
+@media (max-width: 1280px) {
+    .desktop-quick-actions {
+        display: flex;
+    }
 }
 </style>
