@@ -182,7 +182,7 @@
             <v-progress-circular indeterminate></v-progress-circular>
         </v-overlay>
 
-        <div class="desktop-quick-actions" v-if="!noNavbar && showAddTransactionButtonInDesktopNavbar">
+        <div class="desktop-quick-actions" v-if="showAddTransactionButtonInDesktopNavbar">
             <router-link class="quick-action-link" to="/transaction/list?pageType=0&dateType=7">
                 <v-btn class="quick-action-fab" color="primary" rounded="circle" size="large"
                        :aria-label="tt('Add Transaction')" :icon="true"
